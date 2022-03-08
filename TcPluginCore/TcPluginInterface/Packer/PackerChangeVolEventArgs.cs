@@ -1,19 +1,21 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.Packer {
-    [Serializable]
-    public class PackerChangeVolEventArgs: PluginEventArgs {
-        #region Properties
+namespace OY.TotalCommander.TcPluginInterface.Packer;
 
-        public string ArcName { get; private set; }
-        public int Mode { get; private set; }
-
-        #endregion Properties
-
-        public PackerChangeVolEventArgs(string arcName, int mode) {
-            ArcName = arcName;
-            Mode = mode;
-            this.Result = 0;
-        }
+[Serializable]
+public class PackerChangeVolEventArgs : PluginEventArgs
+{
+    public PackerChangeVolEventArgs(string arcName, int mode)
+    {
+        ArcName = arcName;
+        Mode = mode;
+        Result = 0;
     }
+
+    #region Properties
+
+    public string ArcName { get; private set; }
+    public int Mode { get; private set; }
+
+    #endregion Properties
 }

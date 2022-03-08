@@ -1,16 +1,15 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.Content {
-    [Serializable]
-    public class ContentProgressEventArgs: PluginEventArgs {
-        #region Properties
+namespace OY.TotalCommander.TcPluginInterface.Content;
 
-        public int NextBlockData { get; private set; }
+[Serializable]
+public class ContentProgressEventArgs : PluginEventArgs
+{
+    public ContentProgressEventArgs(int nextBlockData) => NextBlockData = nextBlockData;
 
-        #endregion Properties
+    #region Properties
 
-        public ContentProgressEventArgs(int nextBlockData) {
-            NextBlockData = nextBlockData;
-        }
-    }
+    public int NextBlockData { get; private set; }
+
+    #endregion Properties
 }

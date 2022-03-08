@@ -1,11 +1,11 @@
+namespace OY.TotalCommander.TcPluginInterface.QuickSearch;
 
-namespace OY.TotalCommander.TcPluginInterface.QuickSearch {
-    public interface IQuickSearchPlugin {
-        #region Mandatory Methods
+public interface IQuickSearchPlugin
+{
+    #region Mandatory Methods
 
-        bool MatchFile(string filter, string fileName);
-        MatchOptions MatchGetSetOptions(ExactNameMatch status);
+    bool MatchFile(string filter, string fileName);
+    MatchOptions MatchGetSetOptions(ExactNameMatch status);
 
-        #endregion Mandatory Methods
-    }
+    #endregion Mandatory Methods
 }

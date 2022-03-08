@@ -2,19 +2,28 @@ using System;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 
-namespace OY.TotalCommander.TcPluginInterface.FileSystem {
-    [Serializable]
-    [ComVisible(true)]
-    public class NoMoreFilesException: Exception {
-        public NoMoreFilesException() { }
+namespace OY.TotalCommander.TcPluginInterface.FileSystem;
 
-        public NoMoreFilesException(string message) :
-            base(message) { }
+[Serializable]
+[ComVisible(true)]
+public class NoMoreFilesException : Exception
+{
+    public NoMoreFilesException()
+    {
+    }
 
-        public NoMoreFilesException(string message, Exception ex) :
-            base(message, ex) { }
+    public NoMoreFilesException(string message) :
+        base(message)
+    {
+    }
 
-        protected NoMoreFilesException(SerializationInfo info, StreamingContext context) :
-            base(info, context) { }
+    public NoMoreFilesException(string message, Exception ex) :
+        base(message, ex)
+    {
+    }
+
+    protected NoMoreFilesException(SerializationInfo info, StreamingContext context) :
+        base(info, context)
+    {
     }
 }
