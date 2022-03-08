@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
-namespace OY.TotalCommander.TcPluginInterface.FileSystem;
+namespace TcPluginInterface.FileSystem;
 
 // Used as parameter type for GetFile and RenMovFile methods
 [CLSCompliant(false)]

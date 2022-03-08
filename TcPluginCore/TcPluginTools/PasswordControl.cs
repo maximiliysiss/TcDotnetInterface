@@ -1,30 +1,30 @@
 ﻿using System;
 using System.Windows.Forms;
-using OY.TotalCommander.TcPluginInterface;
-using OY.TotalCommander.TcPluginInterface.FileSystem;
-using OY.TotalCommander.TcPluginInterface.Packer;
+using TcPluginInterface;
+using TcPluginInterface.FileSystem;
+using TcPluginInterface.Packer;
 
-namespace OY.TotalCommander.TcPluginTools;
+namespace TcPluginTools;
 
 public partial class PasswordControl : UserControl
 {
     private const string FakePasswordText = "0123456789";
 
-    private readonly PluginPassword pluginPassword;
+    private readonly PluginPassword _pluginPassword;
 
     public PasswordControl(TcPlugin plugin, string storeName)
     {
         Stored = false;
         if (plugin is FsPlugin || plugin is PackerPlugin)
         {
-            pluginPassword = plugin.Password;
+            _pluginPassword = plugin.Password;
         }
 
         InitializeComponent();
         StoreName = storeName;
         WarningText = string.Empty;
         btnClearPassword.Visible = false;
-        if (pluginPassword == null || string.IsNullOrEmpty(StoreName))
+        if (_pluginPassword == null || string.IsNullOrEmpty(StoreName))
         {
             cbxUseMasterPassword.Visible = false;
             //btnClearPassword.Visible = false;
@@ -32,7 +32,7 @@ public partial class PasswordControl : UserControl
         else
         {
             cbxUseMasterPassword.Visible = true;
-            cbxUseMasterPassword.Enabled = pluginPassword.TcMasterPasswordDefined;
+            cbxUseMasterPassword.Enabled = _pluginPassword.TcMasterPasswordDefined;
             //btnClearPassword.Visible = true;
             //btnClearPassword.Enabled = pluginPassword.TcMasterPasswordDefined;
         }
@@ -80,34 +80,29 @@ public partial class PasswordControl : UserControl
         }
     }
 
-    public void parentForm_Closing(object sender, FormClosingEventArgs e)
-    {
-        //SavePassword();
-    }
-
     public void SavePassword()
     {
-        if (cbxUseMasterPassword.Checked && !Stored)
+        if (!cbxUseMasterPassword.Checked || Stored)
+            return;
+
+        var cryptRes = _pluginPassword.Save(StoreName, txtPassword.Text);
+        if (cryptRes == CryptResult.Ok)
         {
-            var cryptRes = pluginPassword.Save(StoreName, txtPassword.Text);
-            if (cryptRes == CryptResult.OK)
-            {
-                Stored = true;
-                //txtPassword.Text = FakePasswordText;
-                cbxUseMasterPassword.Checked = true;
-                btnClearPassword.Enabled = true;
-            }
-            else
-            {
-                MessageBox.Show("Error saving password: " + cryptRes, "ERROR");
-            }
+            Stored = true;
+            //txtPassword.Text = FakePasswordText;
+            cbxUseMasterPassword.Checked = true;
+            btnClearPassword.Enabled = true;
+        }
+        else
+        {
+            MessageBox.Show($"Error saving password: {cryptRes}", "ERROR");
         }
     }
 
     private void btnClearPassword_Click(object sender, EventArgs e)
     {
-        var cryptRes = pluginPassword.Delete(StoreName);
-        if (cryptRes == CryptResult.OK)
+        var cryptRes = _pluginPassword.Delete(StoreName);
+        if (cryptRes == CryptResult.Ok)
         {
             MessageBox.Show("Password deleted.");
             Stored = false;
@@ -117,7 +112,7 @@ public partial class PasswordControl : UserControl
         }
         else
         {
-            MessageBox.Show("Error deleting password: " + cryptRes, "ERROR");
+            MessageBox.Show($"Error deleting password: {cryptRes}", "ERROR");
         }
     }
 

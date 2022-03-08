@@ -2,7 +2,7 @@ using System;
 using System.Drawing;
 using System.IO;
 
-namespace OY.TotalCommander.TcPluginInterface.FileSystem;
+namespace TcPluginInterface.FileSystem;
 
 [CLSCompliant(false)]
 public interface IFsPlugin

@@ -6,12 +6,12 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Permissions;
 using System.Threading;
-using OY.TotalCommander.TcPluginInterface;
-using OY.TotalCommander.TcPluginInterface.Content;
-using OY.TotalCommander.TcPluginInterface.FileSystem;
-using OY.TotalCommander.TcPluginTools;
+using TcPluginInterface;
+using TcPluginInterface.Content;
+using TcPluginInterface.FileSystem;
+using TcPluginTools;
 
-namespace OY.TotalCommander.WfxWrapper;
+namespace WfxWrapper;
 
 public class FsWrapper
 {
@@ -21,12 +21,12 @@ public class FsWrapper
 
     #region Variables
 
-    private static FsPlugin plugin;
-    private static readonly string pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
-    private static string callSignature;
-    private static bool unloaded;
+    private static FsPlugin _plugin;
+    private static readonly string _pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
+    private static string _callSignature;
+    private static bool _unloaded;
 
-    private static IntPtr tcMainWindowHandle = IntPtr.Zero;
+    private static IntPtr _tcMainWindowHandle = IntPtr.Zero;
 
     #endregion Variables
 
@@ -36,13 +36,13 @@ public class FsWrapper
     {
         get
         {
-            if (plugin == null)
+            if (_plugin == null)
             {
-                plugin = (FsPlugin)TcPluginLoader.GetTcPlugin(pluginWrapperDll, PluginType.FileSystem);
-                unloaded = plugin == null;
+                _plugin = (FsPlugin)TcPluginLoader.GetTcPlugin(_pluginWrapperDll, PluginType.FileSystem);
+                _unloaded = _plugin == null;
             }
 
-            return plugin;
+            return _plugin;
         }
     }
 
@@ -50,12 +50,12 @@ public class FsWrapper
 
     private static IntPtr TcMainWindowHandle
     {
-        get => tcMainWindowHandle;
+        get => _tcMainWindowHandle;
         set
         {
-            if (tcMainWindowHandle == IntPtr.Zero)
+            if (_tcMainWindowHandle == IntPtr.Zero)
             {
-                tcMainWindowHandle = value;
+                _tcMainWindowHandle = value;
             }
         }
     }
@@ -66,16 +66,16 @@ public class FsWrapper
 
     //Order of TC calls to FS Plugin methods (before first call to FsFindFirst(W)):
     // - FsGetDefRootName (Is called once, when user installs the plugin in Total Commander)
-    // - FsContentGetSupportedField - can be called before FsInit if custom columns set is determined 
-    //                                and plugin panel is visible 
+    // - FsContentGetSupportedField - can be called before FsInit if custom columns set is determined
+    //                                and plugin panel is visible
     // - FsInit
     // - FsInitW
     // - FsSetDefaultParams
     // - FsSetCryptCallbackW
     // - FsSetCryptCallback
     // - FsExecuteFile(W) (with verb = "MODE I")
-    // - FsContentGetDefaultView(W) - can be called here if custom column set is not determined 
-    //                                and plugin panel is visible 
+    // - FsContentGetDefaultView(W) - can be called here if custom column set is not determined
+    //                                and plugin panel is visible
     // - first call to file list cycle:
     //     FsFindFirst - FsFindNext - FsFindClose
     // - FsLinksToLocalFiles
@@ -94,18 +94,13 @@ public class FsWrapper
     {
         try
         {
-            callSignature = "FsInit";
+            _callSignature = "FsInit";
             Plugin.PluginNumber = pluginNumber;
             TcCallback.SetFsPluginCallbacks(progressProc, null, logProc, null, requestProc, null, null, null);
 
             TraceCall(
                 TraceLevel.Warning,
-                string.Format(
-                    "PluginNumber={0}, {1}, {2}, {3}",
-                    pluginNumber,
-                    progressProc.Method.MethodHandle.GetFunctionPointer().ToString("X"),
-                    logProc.Method.MethodHandle.GetFunctionPointer().ToString("X"),
-                    requestProc.Method.MethodHandle.GetFunctionPointer().ToString("X")));
+                $"PluginNumber={pluginNumber}, {progressProc.Method.MethodHandle.GetFunctionPointer().ToString("X")}, {logProc.Method.MethodHandle.GetFunctionPointer().ToString("X")}, {requestProc.Method.MethodHandle.GetFunctionPointer().ToString("X")}");
         }
         catch (Exception ex)
         {
@@ -124,19 +119,14 @@ public class FsWrapper
     {
         try
         {
-            callSignature = "FsInitW";
+            _callSignature = "FsInitW";
             Plugin.PluginNumber = pluginNumber;
             TcPluginLoader.FillLoadingInfo(Plugin);
             TcCallback.SetFsPluginCallbacks(null, progressProcW, null, logProcW, null, requestProcW, null, null);
 
             TraceCall(
                 TraceLevel.Warning,
-                string.Format(
-                    "PluginNumber={0}, {1}, {2}, {3}",
-                    pluginNumber,
-                    progressProcW.Method.MethodHandle.GetFunctionPointer().ToString("X"),
-                    logProcW.Method.MethodHandle.GetFunctionPointer().ToString("X"),
-                    requestProcW.Method.MethodHandle.GetFunctionPointer().ToString("X")));
+                $"PluginNumber={pluginNumber}, {progressProcW.Method.MethodHandle.GetFunctionPointer().ToString("X")}, {logProcW.Method.MethodHandle.GetFunctionPointer().ToString("X")}, {requestProcW.Method.MethodHandle.GetFunctionPointer().ToString("X")}");
         }
         catch (Exception ex)
         {
@@ -161,11 +151,10 @@ public class FsWrapper
     public static IntPtr FindFirstInternal(string path, IntPtr findFileData, bool isUnicode)
     {
         var result = NativeMethods.INVALID_HANDLE;
-        callSignature = string.Format("FindFirst ({0})", path);
+        _callSignature = $"FindFirst ({path})";
         try
         {
-            FindData findData;
-            var o = Plugin.FindFirst(path, out findData);
+            var o = Plugin.FindFirst(path, out var findData);
             if (o == null)
             {
                 TraceCall(TraceLevel.Info, "<None>");
@@ -205,7 +194,7 @@ public class FsWrapper
     public static bool FindNextInternal(IntPtr hdl, IntPtr findFileData, bool isUnicode)
     {
         var result = false;
-        callSignature = "FindNext";
+        _callSignature = "FindNext";
         try
         {
             FindData findData = null;
@@ -239,15 +228,14 @@ public class FsWrapper
     public static int FindClose(IntPtr hdl)
     {
         var count = 0;
-        callSignature = "FindClose";
+        _callSignature = "FindClose";
         try
         {
             var o = TcHandles.GetObject(hdl);
             if (o != null)
             {
                 Plugin.FindClose(o);
-                var disp = o as IDisposable;
-                if (disp != null)
+                if (o is IDisposable disp)
                 {
                     disp.Dispose();
                 }
@@ -255,7 +243,7 @@ public class FsWrapper
                 count = TcHandles.RemoveHandle(hdl);
             }
 
-            TraceCall(TraceLevel.Info, string.Format("{0} item(s)", count));
+            TraceCall(TraceLevel.Info, $"{count} item(s)");
         }
         catch (Exception ex)
         {
@@ -277,7 +265,7 @@ public class FsWrapper
     [DllExport(EntryPoint = "FsSetCryptCallback")]
     public static void SetCryptCallback(FsCryptCallback cryptProc, int cryptNumber, int flags)
     {
-        callSignature = "SetCryptCallback";
+        _callSignature = "SetCryptCallback";
         try
         {
             TcCallback.SetFsPluginCallbacks(null, null, null, null, null, null, cryptProc, null);
@@ -285,11 +273,7 @@ public class FsWrapper
 
             TraceCall(
                 TraceLevel.Warning,
-                string.Format(
-                    "CryptoNumber={0}, Flags={1}, {2}",
-                    cryptNumber,
-                    flags,
-                    cryptProc.Method.MethodHandle.GetFunctionPointer().ToString("X")));
+                $"CryptoNumber={cryptNumber}, Flags={flags}, {cryptProc.Method.MethodHandle.GetFunctionPointer().ToString("X")}");
         }
         catch (Exception ex)
         {
@@ -300,7 +284,7 @@ public class FsWrapper
     [DllExport(EntryPoint = "FsSetCryptCallbackW")]
     public static void SetCryptCallbackW(FsCryptCallbackW cryptProcW, int cryptNumber, int flags)
     {
-        callSignature = "SetCryptCallbackW";
+        _callSignature = "SetCryptCallbackW";
         try
         {
             TcCallback.SetFsPluginCallbacks(null, null, null, null, null, null, null, cryptProcW);
@@ -308,11 +292,7 @@ public class FsWrapper
             TcPluginLoader.FillLoadingInfo(Plugin);
             TraceCall(
                 TraceLevel.Warning,
-                string.Format(
-                    "CryptoNumber={0}, Flags={1}, {2}",
-                    cryptNumber,
-                    flags,
-                    cryptProcW.Method.MethodHandle.GetFunctionPointer().ToString("X")));
+                $"CryptoNumber={cryptNumber}, Flags={flags}, {cryptProcW.Method.MethodHandle.GetFunctionPointer().ToString("X")}");
         }
         catch (Exception ex)
         {
@@ -328,7 +308,7 @@ public class FsWrapper
     [DllExport(EntryPoint = "FsGetDefRootName")]
     public static void GetDefRootName(IntPtr rootName, int maxLen)
     {
-        callSignature = "GetDefRootName";
+        _callSignature = "GetDefRootName";
         try
         {
             TcUtils.WriteStringAnsi(Plugin.Title, rootName, maxLen);
@@ -346,7 +326,7 @@ public class FsWrapper
     #region FsGetFile
 
     [DllExport(EntryPoint = "FsGetFile")]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static int GetFile(
         [MarshalAs(UnmanagedType.LPStr)] string remoteName,
         IntPtr localName,
@@ -356,8 +336,7 @@ public class FsWrapper
         var locName = Marshal.PtrToStringAnsi(localName);
         var inLocName = locName;
         var result = GetFileInternal(remoteName, ref locName, (CopyFlags)copyFlags, remoteInfo);
-        if (result == FileSystemExitCode.OK
-            && !locName.Equals(inLocName, StringComparison.CurrentCultureIgnoreCase))
+        if (result == FileSystemExitCode.Ok && !locName.Equals(inLocName, StringComparison.CurrentCultureIgnoreCase))
         {
             TcUtils.WriteStringAnsi(locName, localName, 0);
         }
@@ -366,7 +345,7 @@ public class FsWrapper
     }
 
     [DllExport(EntryPoint = "FsGetFileW")]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static int GetFileW(
         [MarshalAs(UnmanagedType.LPWStr)] string remoteName,
         IntPtr localName,
@@ -376,7 +355,7 @@ public class FsWrapper
         var locName = Marshal.PtrToStringUni(localName);
         var inLocName = locName;
         var result = GetFileInternal(remoteName, ref locName, (CopyFlags)copyFlags, remoteInfo);
-        if (result == FileSystemExitCode.OK
+        if (result == FileSystemExitCode.Ok
             && !locName.Equals(inLocName, StringComparison.CurrentCultureIgnoreCase))
         {
             TcUtils.WriteStringUni(locName, localName, 0);
@@ -392,11 +371,7 @@ public class FsWrapper
         IntPtr rmtInfo)
     {
         FileSystemExitCode result;
-        callSignature = string.Format(
-            "GetFile '{0}' => '{1}' ({2})",
-            remoteName,
-            localName,
-            copyFlags.ToString());
+        _callSignature = $"GetFile '{remoteName}' => '{localName}' ({copyFlags.ToString()})";
         var remoteInfo = new RemoteInfo(rmtInfo);
         try
         {
@@ -418,7 +393,7 @@ public class FsWrapper
     #region FsPutFile
 
     [DllExport(EntryPoint = "FsPutFile")]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static int PutFile(
         [MarshalAs(UnmanagedType.LPStr)] string localName,
         IntPtr remoteName,
@@ -427,7 +402,7 @@ public class FsWrapper
         var rmtName = Marshal.PtrToStringAnsi(remoteName);
         var inRmtName = rmtName;
         var result = PutFileInternal(localName, ref rmtName, (CopyFlags)copyFlags);
-        if (result == FileSystemExitCode.OK
+        if (result == FileSystemExitCode.Ok
             && !rmtName.Equals(inRmtName, StringComparison.CurrentCultureIgnoreCase))
         {
             TcUtils.WriteStringAnsi(rmtName, remoteName, 0);
@@ -437,7 +412,7 @@ public class FsWrapper
     }
 
     [DllExport(EntryPoint = "FsPutFileW")]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static int PutFileW(
         [MarshalAs(UnmanagedType.LPWStr)] string localName,
         IntPtr remoteName,
@@ -446,7 +421,7 @@ public class FsWrapper
         var rmtName = Marshal.PtrToStringUni(remoteName);
         var inRmtName = rmtName;
         var result = PutFileInternal(localName, ref rmtName, (CopyFlags)copyFlags);
-        if (result == FileSystemExitCode.OK
+        if (result == FileSystemExitCode.Ok
             && !rmtName.Equals(inRmtName, StringComparison.CurrentCultureIgnoreCase))
         {
             TcUtils.WriteStringUni(rmtName, remoteName, 0);
@@ -458,11 +433,7 @@ public class FsWrapper
     private static FileSystemExitCode PutFileInternal(string localName, ref string remoteName, CopyFlags copyFlags)
     {
         FileSystemExitCode result;
-        callSignature = string.Format(
-            "PutFile '{0}' => '{1}' ({2})",
-            localName,
-            remoteName,
-            copyFlags.ToString());
+        _callSignature = $"PutFile '{localName}' => '{remoteName}' ({copyFlags.ToString()})";
         try
         {
             result = Plugin.PutFile(localName, ref remoteName, copyFlags);
@@ -505,16 +476,12 @@ public class FsWrapper
             return (int)result;
         }
 
-        callSignature = string.Format(
-            "RenMovFile '{0}' => '{1}' ({2})",
-            oldName,
-            newName,
-            (move ? "M" : " ") + (overwrite ? "O" : " "));
+        _callSignature = $"RenMovFile '{oldName}' => '{newName}' ({(move ? "M" : " ") + (overwrite ? "O" : " ")})";
         var remoteInfo = new RemoteInfo(rmtInfo);
         try
         {
             result = newName.Equals(oldName, StringComparison.CurrentCultureIgnoreCase)
-                ? FileSystemExitCode.OK
+                ? FileSystemExitCode.Ok
                 : Plugin.RenMovFile(oldName, newName, move, overwrite, remoteInfo);
 
             TraceCall(TraceLevel.Warning, result.ToString());
@@ -541,7 +508,7 @@ public class FsWrapper
     public static bool DeleteFileW([MarshalAs(UnmanagedType.LPWStr)] string fileName)
     {
         var result = false;
-        callSignature = string.Format("DeleteFile '{0}'", fileName);
+        _callSignature = $"DeleteFile '{fileName}'";
         try
         {
             result = Plugin.DeleteFile(fileName);
@@ -569,7 +536,7 @@ public class FsWrapper
     public static bool RemoveDirW([MarshalAs(UnmanagedType.LPWStr)] string dirName)
     {
         var result = false;
-        callSignature = string.Format("RemoveDir '{0}'", dirName);
+        _callSignature = $"RemoveDir '{dirName}'";
         try
         {
             result = Plugin.RemoveDir(dirName);
@@ -597,7 +564,7 @@ public class FsWrapper
     public static bool MkDirW([MarshalAs(UnmanagedType.LPWStr)] string dirName)
     {
         var result = false;
-        callSignature = string.Format("MkDir '{0}'", dirName);
+        _callSignature = $"MkDir '{dirName}'";
         try
         {
             result = Directory.Exists(dirName) || Plugin.MkDir(dirName);
@@ -653,8 +620,8 @@ public class FsWrapper
 
     private static ExecResult ExecuteFileInternal(IntPtr mainWin, ref string remoteName, string verb)
     {
-        var result = ExecResult.OK;
-        callSignature = string.Format("ExecuteFile '{0}' - {1}", remoteName, verb);
+        var result = ExecResult.Ok;
+        _callSignature = $"ExecuteFile '{remoteName}' - {verb}";
         try
         {
             TcPluginLoader.SetTcMainWindowHandle(mainWin);
@@ -663,7 +630,7 @@ public class FsWrapper
             var resStr = result.ToString();
             if (result == ExecResult.SymLink)
             {
-                resStr += " (" + remoteName + ")";
+                resStr += $" ({remoteName})";
             }
 
             TraceCall(TraceLevel.Warning, resStr);
@@ -671,7 +638,7 @@ public class FsWrapper
             if (result == ExecResult.OkReread)
             {
                 tcWindow.Refresh();
-                result = ExecResult.OK;
+                result = ExecResult.Ok;
             }
         }
         catch (Exception ex)
@@ -696,7 +663,7 @@ public class FsWrapper
     {
         var result = false;
         var attr = (FileAttributes)newAttr;
-        callSignature = string.Format("SetAttr '{0}' ({1})", remoteName, attr.ToString());
+        _callSignature = $"SetAttr '{remoteName}' ({attr.ToString()})";
         try
         {
             result = Plugin.SetAttr(remoteName, attr);
@@ -717,7 +684,7 @@ public class FsWrapper
 
     [DllExport(EntryPoint = "FsSetTime")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static bool SetTime(
         [MarshalAs(UnmanagedType.LPStr)] string remoteName,
         IntPtr creationTime,
@@ -727,7 +694,7 @@ public class FsWrapper
 
     [DllExport(EntryPoint = "FsSetTimeW")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static bool SetTimeW(
         [MarshalAs(UnmanagedType.LPWStr)] string remoteName,
         IntPtr creationTime,
@@ -735,13 +702,13 @@ public class FsWrapper
         IntPtr lastWriteTime)
     {
         var result = false;
-        callSignature = string.Format("SetTime '{0}' (", remoteName);
+        _callSignature = $"SetTime '{remoteName}' (";
         var crTime = TcUtils.ReadDateTime(creationTime);
-        callSignature += crTime.HasValue ? string.Format(" {0:g} #", crTime.Value) : " NULL #";
+        _callSignature += crTime.HasValue ? $" {crTime.Value:g} #" : " NULL #";
         var laTime = TcUtils.ReadDateTime(lastAccessTime);
-        callSignature += laTime.HasValue ? string.Format(" {0:g} #", laTime.Value) : " NULL #";
+        _callSignature += laTime.HasValue ? $" {laTime.Value:g} #" : " NULL #";
         var lwTime = TcUtils.ReadDateTime(lastWriteTime);
-        callSignature += lwTime.HasValue ? string.Format(" {0:g} #", lwTime.Value) : " NULL #";
+        _callSignature += lwTime.HasValue ? $" {lwTime.Value:g} #" : " NULL #";
         try
         {
             result = Plugin.SetTime(remoteName, crTime, laTime, lwTime);
@@ -769,7 +736,7 @@ public class FsWrapper
     public static bool DisconnectW([MarshalAs(UnmanagedType.LPWStr)] string disconnectRoot)
     {
         var result = false;
-        callSignature = string.Format("Disconnect '{0}'", disconnectRoot);
+        _callSignature = $"Disconnect '{disconnectRoot}'";
         try
         {
             result = Plugin.Disconnect(disconnectRoot);
@@ -796,7 +763,7 @@ public class FsWrapper
     [DllExport(EntryPoint = "FsStatusInfoW")]
     public static void StatusInfoW([MarshalAs(UnmanagedType.LPWStr)] string remoteDir, int startEnd, int operation)
     {
-        if (unloaded)
+        if (_unloaded)
         {
             return;
         }
@@ -804,16 +771,12 @@ public class FsWrapper
         try
         {
 #if TRACE
-            callSignature = string.Format(
-                "{0} - '{1}': {2}",
-                ((InfoOperation)operation).ToString(),
-                remoteDir,
-                ((InfoStartEnd)startEnd).ToString());
+            _callSignature = $"{((InfoOperation)operation).ToString()} - '{remoteDir}': {((InfoStartEnd)startEnd).ToString()}";
             if (Plugin.WriteStatusInfo)
             {
                 TcTrace.TraceOut(
                     TraceLevel.Warning,
-                    callSignature,
+                    _callSignature,
                     Plugin.TraceTitle,
                     startEnd == (int)InfoStartEnd.End ? -1 : startEnd == (int)InfoStartEnd.Start ? 1 : 0);
             }
@@ -831,7 +794,7 @@ public class FsWrapper
     #region FsExtractCustomIcon
 
     [DllExport(EntryPoint = "FsExtractCustomIcon")]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static int ExtractCustomIcon(IntPtr remoteName, int extractFlags, IntPtr theIcon)
     {
         var rmtName = Marshal.PtrToStringAnsi(remoteName);
@@ -847,7 +810,7 @@ public class FsWrapper
     }
 
     [DllExport(EntryPoint = "FsExtractCustomIconW")]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static int ExtractCustomIconW(IntPtr remoteName, int extractFlags, IntPtr theIcon)
     {
         var rmtName = Marshal.PtrToStringUni(remoteName);
@@ -862,22 +825,18 @@ public class FsWrapper
         return (int)result;
     }
 
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static ExtractIconResult ExtractIconInternal(ref string remoteName, int extractFlags, IntPtr theIcon)
     {
         const uint imageTypeIcon = 1; //  IMAGE_ICON
-        const uint loadImageFlags = 0x10 + 0x8000; //  LR_LOADFROMFILE | LR_SHARED 
+        const uint loadImageFlags = 0x10 + 0x8000; //  LR_LOADFROMFILE | LR_SHARED
 
         var result = ExtractIconResult.UseDefault;
         var flags = (ExtractIconFlags)extractFlags;
-        callSignature = string.Format(
-            "ExtractCustomIcon '{0}' ({1})",
-            remoteName,
-            flags.ToString());
+        _callSignature = $"ExtractCustomIcon '{remoteName}' ({flags.ToString()})";
         try
         {
-            Icon icon;
-            result = Plugin.ExtractCustomIcon(ref remoteName, flags, out icon);
+            result = Plugin.ExtractCustomIcon(ref remoteName, flags, out var icon);
             var resultStr = result.ToString();
             if (result == ExtractIconResult.LoadFromFile)
             {
@@ -889,7 +848,7 @@ public class FsWrapper
                 else
                 {
                     IntPtr extrIcon;
-                    // use LoadImage, it produces better results than LoadIcon 
+                    // use LoadImage, it produces better results than LoadIcon
                     if ((flags & ExtractIconFlags.Small) == ExtractIconFlags.Small)
                     {
                         extrIcon = NativeMethods.LoadImage(
@@ -914,12 +873,12 @@ public class FsWrapper
                     if (extrIcon == IntPtr.Zero)
                     {
                         var errorCode = NativeMethods.GetLastError();
-                        resultStr += " , extrIcon = 0 (errorCode = " + errorCode + ") - UseDefault";
+                        resultStr += $" , extrIcon = 0 (errorCode = {errorCode}) - UseDefault";
                         result = ExtractIconResult.UseDefault;
                     }
                     else
                     {
-                        resultStr += " , extrIcon (" + extrIcon + ")";
+                        resultStr += $" , extrIcon ({extrIcon})";
                         Marshal.WriteIntPtr(theIcon, extrIcon);
                         result = ExtractIconResult.Extracted;
                     }
@@ -934,7 +893,7 @@ public class FsWrapper
                 }
                 else
                 {
-                    resultStr += " , icon (" + icon.Handle + ")";
+                    resultStr += $" , icon ({icon.Handle})";
                     Marshal.WriteIntPtr(theIcon, icon.Handle);
                 }
             }
@@ -958,7 +917,7 @@ public class FsWrapper
     [DllExport(EntryPoint = "FsSetDefaultParams")]
     public static void SetDefaultParams(ref PluginDefaultParams defParams)
     {
-        callSignature = "SetDefaultParams";
+        _callSignature = "SetDefaultParams";
         try
         {
             Plugin.DefaultParams = defParams;
@@ -976,7 +935,7 @@ public class FsWrapper
     #region FsGetPreviewBitmap
 
     [DllExport(EntryPoint = "FsGetPreviewBitmap")]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static int GetPreviewBitmap(IntPtr remoteName, int width, int height, IntPtr returnedBitmap)
     {
         var rmtName = Marshal.PtrToStringAnsi(remoteName);
@@ -993,7 +952,7 @@ public class FsWrapper
     }
 
     [DllExport(EntryPoint = "FsGetPreviewBitmapW")]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static int GetPreviewBitmapW(IntPtr remoteName, int width, int height, IntPtr returnedBitmap)
     {
         var rmtName = Marshal.PtrToStringUni(remoteName);
@@ -1009,7 +968,7 @@ public class FsWrapper
         return (int)result;
     }
 
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static PreviewBitmapResult GetPreviewBitmapInternal(
         ref string remoteName,
         int width,
@@ -1017,78 +976,67 @@ public class FsWrapper
         IntPtr returnedBitmap)
     {
         var result = PreviewBitmapResult.None;
-        callSignature = string.Format(
-            "GetPreviewBitmap '{0}' ({1} x {2})",
-            remoteName,
-            width,
-            height);
+        _callSignature = $"GetPreviewBitmap '{remoteName}' ({width} x {height})";
         try
         {
-            Bitmap bitmap;
-            result = Plugin.GetPreviewBitmap(ref remoteName, width, height, out bitmap);
+            result = Plugin.GetPreviewBitmap(ref remoteName, width, height, out var bitmap);
 
             var isCached = (int)result >= (int)PreviewBitmapResult.Cache;
-            var resNoCache =
-                isCached ? (PreviewBitmapResult)((int)result - (int)PreviewBitmapResult.Cache) : result;
-            if (resNoCache == PreviewBitmapResult.None)
+            var resNoCache = isCached ? (PreviewBitmapResult)((int)result - (int)PreviewBitmapResult.Cache) : result;
+            switch (resNoCache)
             {
-                result = PreviewBitmapResult.None;
-            }
-            else if (resNoCache == PreviewBitmapResult.Extracted)
-            {
-                if (bitmap == null)
-                {
+                case PreviewBitmapResult.None:
+                case PreviewBitmapResult.Extracted when bitmap == null:
                     result = PreviewBitmapResult.None;
-                }
-                else
-                {
-                    var extrBitmap = bitmap.GetHbitmap();
-                    Marshal.WriteIntPtr(returnedBitmap, extrBitmap);
-                    remoteName = string.Empty;
-                }
-            }
-            else if (resNoCache == PreviewBitmapResult.ExtractYourself
-                     || resNoCache == PreviewBitmapResult.ExtractYourselfAndDelete)
-            {
-                if (string.IsNullOrEmpty(remoteName) || !File.Exists(remoteName))
-                {
-                    result = PreviewBitmapResult.None;
-                }
-                else
-                {
-                    var img = Image.FromFile(remoteName);
-                    bitmap = new Bitmap(img, width, height);
-                    Marshal.WriteIntPtr(returnedBitmap, bitmap.GetHbitmap());
-                    result = PreviewBitmapResult.Extracted;
-                    if (isCached)
+                    break;
+                case PreviewBitmapResult.Extracted:
                     {
-                        result |= PreviewBitmapResult.Cache;
+                        var extrBitmap = bitmap.GetHbitmap();
+                        Marshal.WriteIntPtr(returnedBitmap, extrBitmap);
+                        remoteName = string.Empty;
+                        break;
                     }
+                case PreviewBitmapResult.ExtractYourself:
+                case PreviewBitmapResult.ExtractYourselfAndDelete:
+                    {
+                        if (string.IsNullOrEmpty(remoteName) || !File.Exists(remoteName))
+                        {
+                            result = PreviewBitmapResult.None;
+                        }
+                        else
+                        {
+                            var img = Image.FromFile(remoteName);
+                            bitmap = new Bitmap(img, width, height);
+                            Marshal.WriteIntPtr(returnedBitmap, bitmap.GetHbitmap());
+                            result = PreviewBitmapResult.Extracted;
+                            if (isCached)
+                            {
+                                result |= PreviewBitmapResult.Cache;
+                            }
 
-                    if (resNoCache == PreviewBitmapResult.ExtractYourselfAndDelete)
-                    {
-                        try
-                        {
-                            File.Delete(remoteName);
+                            if (resNoCache == PreviewBitmapResult.ExtractYourselfAndDelete)
+                            {
+                                try
+                                {
+                                    File.Delete(remoteName);
+                                }
+                                catch (IOException)
+                                {
+                                }
+                                catch (UnauthorizedAccessException)
+                                {
+                                }
+                            }
                         }
-                        catch (IOException)
-                        {
-                        }
-                        catch (UnauthorizedAccessException)
-                        {
-                        }
+
+                        break;
                     }
-                }
             }
 
             // !!! may produce much trace info !!!
             TraceCall(
                 TraceLevel.Verbose,
-                string.Format(
-                    "{0}{1} ({2})",
-                    resNoCache.ToString(),
-                    isCached ? ", Cached" : null,
-                    resNoCache == PreviewBitmapResult.None ? null : remoteName));
+                $"{resNoCache.ToString()}{(isCached ? ", Cached" : null)} ({(resNoCache == PreviewBitmapResult.None ? null : remoteName)})");
         }
         catch (Exception ex)
         {
@@ -1108,7 +1056,7 @@ public class FsWrapper
     public static bool LinksToLocalFiles()
     {
         var result = false;
-        callSignature = "LinksToLocalFiles";
+        _callSignature = "LinksToLocalFiles";
         try
         {
             result = Plugin.IsTempFilePanel;
@@ -1129,7 +1077,7 @@ public class FsWrapper
 
     [DllExport(EntryPoint = "FsGetLocalName")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static bool GetLocalName(IntPtr remoteName, int maxLen)
     {
         var rmtName = Marshal.PtrToStringAnsi(remoteName);
@@ -1144,7 +1092,7 @@ public class FsWrapper
 
     [DllExport(EntryPoint = "FsGetLocalNameW")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
     public static bool GetLocalNameW(IntPtr remoteName, int maxLen)
     {
         var rmtName = Marshal.PtrToStringUni(remoteName);
@@ -1160,7 +1108,7 @@ public class FsWrapper
     public static bool GetLocalNameInternal(ref string remoteName, int maxLen)
     {
         var result = false;
-        callSignature = string.Format("GetLocalName '{0}'", remoteName);
+        _callSignature = $"GetLocalName '{remoteName}'";
         try
         {
             result = Plugin.GetLocalName(ref remoteName, maxLen);
@@ -1185,7 +1133,7 @@ public class FsWrapper
     public static int GetBackgroundFlags()
     {
         var result = FsBackgroundFlags.None;
-        callSignature = "GetBackgroundFlags";
+        _callSignature = "GetBackgroundFlags";
         try
         {
             result = Plugin.BackgroundFlags;
@@ -1214,13 +1162,12 @@ public class FsWrapper
     public static int GetSupportedField(int fieldIndex, IntPtr fieldName, IntPtr units, int maxLen)
     {
         var result = ContentFieldType.NoMoreFields;
-        callSignature = string.Format("ContentGetSupportedField ({0})", fieldIndex);
+        _callSignature = $"ContentGetSupportedField ({fieldIndex})";
         try
         {
             if (ContentPlgn != null)
             {
-                string fieldNameStr, unitsStr;
-                result = ContentPlgn.GetSupportedField(fieldIndex, out fieldNameStr, out unitsStr, maxLen);
+                result = ContentPlgn.GetSupportedField(fieldIndex, out var fieldNameStr, out var unitsStr, maxLen);
                 if (result != ContentFieldType.NoMoreFields)
                 {
                     if (string.IsNullOrEmpty(fieldNameStr))
@@ -1244,11 +1191,7 @@ public class FsWrapper
                 // !!! may produce much trace info !!!
                 TraceCall(
                     TraceLevel.Verbose,
-                    string.Format(
-                        "{0} - {1} - {2}",
-                        result.ToString(),
-                        fieldNameStr,
-                        unitsStr));
+                    $"{result.ToString()} - {fieldNameStr} - {unitsStr}");
             }
         }
         catch (Exception ex)
@@ -1286,22 +1229,16 @@ public class FsWrapper
         var fieldType = ContentFieldType.NoMoreFields;
         var gvFlags = (GetValueFlags)flags;
         fileName = fileName.Substring(1);
-        callSignature = string.Format(
-            "ContentGetValue '{0}' ({1}/{2}/{3})",
-            fileName,
-            fieldIndex,
-            unitIndex,
-            gvFlags.ToString());
+        _callSignature = $"ContentGetValue '{fileName}' ({fieldIndex}/{unitIndex}/{gvFlags.ToString()})";
         try
         {
-            string fieldValueStr;
             result = ContentPlgn.GetValue(
                 fileName,
                 fieldIndex,
                 unitIndex,
                 maxLen,
                 gvFlags,
-                out fieldValueStr,
+                out var fieldValueStr,
                 out fieldType);
             if (result == GetValueResult.Success
                 || result == GetValueResult.Delayed
@@ -1313,7 +1250,7 @@ public class FsWrapper
             }
 
             // !!! may produce much trace info !!!
-            TraceCall(TraceLevel.Verbose, string.Format("{0} - {1}", result.ToString(), fieldValueStr));
+            TraceCall(TraceLevel.Verbose, $"{result.ToString()} - {fieldValueStr}");
         }
         catch (Exception ex)
         {
@@ -1334,7 +1271,7 @@ public class FsWrapper
     [DllExport(EntryPoint = "FsContentStopGetValueW")]
     public static void StopGetValueW([MarshalAs(UnmanagedType.LPWStr)] string fileName)
     {
-        callSignature = "ContentStopGetValue";
+        _callSignature = "ContentStopGetValue";
         try
         {
             fileName = fileName.Substring(1);
@@ -1356,7 +1293,7 @@ public class FsWrapper
     public static int GetDefaultSortOrder(int fieldIndex)
     {
         var result = DefaultSortOrder.Asc;
-        callSignature = string.Format("ContentGetDefaultSortOrder ({0})", fieldIndex);
+        _callSignature = $"ContentGetDefaultSortOrder ({fieldIndex})";
         try
         {
             result = ContentPlgn.GetDefaultSortOrder(fieldIndex);
@@ -1380,7 +1317,7 @@ public class FsWrapper
     {
         if (ContentPlgn != null)
         {
-            callSignature = "ContentPluginUnloading";
+            _callSignature = "ContentPluginUnloading";
             try
             {
                 ContentPlgn.PluginUnloading();
@@ -1402,7 +1339,7 @@ public class FsWrapper
     public static int GetSupportedFieldFlags(int fieldIndex)
     {
         var result = SupportedFieldOptions.None;
-        callSignature = string.Format("ContentGetSupportedFieldFlags ({0})", fieldIndex);
+        _callSignature = $"ContentGetSupportedFieldFlags ({fieldIndex})";
         try
         {
             result = ContentPlgn.GetSupportedFieldFlags(fieldIndex);
@@ -1444,12 +1381,7 @@ public class FsWrapper
         var fldType = (ContentFieldType)fieldType;
         var svFlags = (SetValueFlags)flags;
         fileName = fileName.Substring(1);
-        callSignature = string.Format(
-            "ContentSetValue '{0}' ({1}/{2}/{3})",
-            fileName,
-            fieldIndex,
-            unitIndex,
-            svFlags.ToString());
+        _callSignature = $"ContentSetValue '{fileName}' ({fieldIndex}/{unitIndex}/{svFlags.ToString()})";
         try
         {
             var value = new ContentValue(fieldValue, fldType);
@@ -1461,7 +1393,7 @@ public class FsWrapper
                 value.StrValue,
                 svFlags);
 
-            TraceCall(TraceLevel.Info, string.Format("{0} - {1}", result.ToString(), value.StrValue));
+            TraceCall(TraceLevel.Info, $"{result.ToString()} - {value.StrValue}");
         }
         catch (Exception ex)
         {
@@ -1485,8 +1417,7 @@ public class FsWrapper
         IntPtr viewOptions,
         int maxLen)
     {
-        string contents, headers, widths, options;
-        var result = GetDefaultViewFs(out contents, out headers, out widths, out options, maxLen);
+        var result = GetDefaultViewFs(out var contents, out var headers, out var widths, out var options, maxLen);
         if (result)
         {
             TcUtils.WriteStringAnsi(contents, viewContents, maxLen);
@@ -1507,8 +1438,7 @@ public class FsWrapper
         IntPtr viewOptions,
         int maxLen)
     {
-        string contents, headers, widths, options;
-        var result = GetDefaultViewFs(out contents, out headers, out widths, out options, maxLen);
+        var result = GetDefaultViewFs(out var contents, out var headers, out var widths, out var options, maxLen);
         if (result)
         {
             TcUtils.WriteStringUni(contents, viewContents, maxLen);
@@ -1532,26 +1462,14 @@ public class FsWrapper
         viewHeaders = null;
         viewWidths = null;
         viewOptions = null;
-        callSignature = "ContentGetDefaultView";
+        _callSignature = "ContentGetDefaultView";
         try
         {
             if (ContentPlgn != null)
             {
-                result = ContentPlgn.GetDefaultView(
-                    out viewContents,
-                    out viewHeaders,
-                    out viewWidths,
-                    out viewOptions,
-                    maxLen);
+                result = ContentPlgn.GetDefaultView(out viewContents, out viewHeaders, out viewWidths, out viewOptions, maxLen);
 
-                TraceCall(
-                    TraceLevel.Info,
-                    string.Format(
-                        "\n  {0}\n  {1}\n  {2}\n  {3}",
-                        viewContents,
-                        viewHeaders,
-                        viewWidths,
-                        viewOptions));
+                TraceCall(TraceLevel.Info, $"\n  {viewContents}\n  {viewHeaders}\n  {viewWidths}\n  {viewOptions}");
             }
         }
         catch (Exception ex)
@@ -1578,19 +1496,19 @@ public class FsWrapper
 
         if (status == PluginLifetimeStatus.PluginUnloaded)
         {
-            plugin = null;
-            unloaded = true;
+            _plugin = null;
+            _unloaded = true;
             throw new Exception("Plugin access denied.");
         }
 
-        TcPluginLoader.ProcessException(plugin, status != PluginLifetimeStatus.Active, callSignature, ex);
+        TcPluginLoader.ProcessException(_plugin, status != PluginLifetimeStatus.Active, _callSignature, ex);
     }
 
     private static void TraceCall(TraceLevel level, string result)
     {
 #if TRACE
-        TcTrace.TraceCall(plugin, level, callSignature, result);
-        callSignature = null;
+        TcTrace.TraceCall(_plugin, level, _callSignature, result);
+        _callSignature = null;
 #endif
     }
 
@@ -1598,11 +1516,11 @@ public class FsWrapper
 
     private static void TcOpenPluginHome()
     {
-        if (TcMainWindowHandle != IntPtr.Zero)
-        {
-            TcWindow.SendMessage(TcMainWindowHandle, CmOpenNetwork);
-            Thread.Sleep(500);
-        }
+        if (TcMainWindowHandle == IntPtr.Zero)
+            return;
+
+        TcWindow.SendMessage(TcMainWindowHandle, CmOpenNetwork);
+        Thread.Sleep(500);
     }
 
     #endregion Tracing & Exceptions

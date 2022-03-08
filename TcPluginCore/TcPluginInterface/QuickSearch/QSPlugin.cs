@@ -1,13 +1,12 @@
 ﻿using System.Collections.Specialized;
 
-namespace OY.TotalCommander.TcPluginInterface.QuickSearch;
+namespace TcPluginInterface.QuickSearch;
 
 public class QuickSearchPlugin : TcPlugin, IQuickSearchPlugin
 {
     #region Constructors
 
-    public QuickSearchPlugin(StringDictionary pluginSettings)
-        : base(pluginSettings)
+    public QuickSearchPlugin(StringDictionary pluginSettings) : base(pluginSettings)
     {
     }
 

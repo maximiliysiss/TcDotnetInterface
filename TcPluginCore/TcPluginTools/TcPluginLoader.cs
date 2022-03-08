@@ -1,25 +1,26 @@
-﻿using System;
+﻿#if TRACE
+#endif
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Remoting;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using OY.TotalCommander.TcPluginInterface;
-using OY.TotalCommander.TcPluginInterface.Content;
-using OY.TotalCommander.TcPluginInterface.FileSystem;
-using OY.TotalCommander.TcPluginInterface.Lister;
+using TcPluginInterface;
+using TcPluginInterface.Content;
+using TcPluginInterface.FileSystem;
+using TcPluginInterface.Lister;
 #if TRACE
-using System.Globalization;
-#endif
-#if TRACE
-using System.Text;
 #endif
 
-namespace OY.TotalCommander.TcPluginTools;
+namespace TcPluginTools;
 
 [Serializable]
 public static class TcPluginLoader
@@ -35,7 +36,7 @@ public static class TcPluginLoader
             throw new ArgumentException(ErrorMsg3);
         }
 
-        // First we pass event arguments to main AppDomain  
+        // First we pass event arguments to main AppDomain
         var callBackDataBufferName = tp.DataBufferName;
 
         var mainDomain = tp.MainDomain;
@@ -61,14 +62,15 @@ public static class TcPluginLoader
 
         e.Result = res.Result;
 
-        // Following part is event specific !!!
-        if (e is RequestEventArgs)
+        switch (e)
         {
-            ((RequestEventArgs)e).ReturnedText = ((RequestEventArgs)res).ReturnedText;
-        }
-        else if (e is CryptEventArgs)
-        {
-            ((CryptEventArgs)e).Password = ((CryptEventArgs)res).Password;
+            // Following part is event specific !!!
+            case RequestEventArgs args:
+                args.ReturnedText = ((RequestEventArgs)res).ReturnedText;
+                break;
+            case CryptEventArgs args:
+                args.Password = ((CryptEventArgs)res).Password;
+                break;
         }
     }
 
@@ -108,11 +110,11 @@ public static class TcPluginLoader
 
     #region Variables
 
-    private static List<TcPluginLoadingInfo> loadedPlugins = new();
-    private static StringDictionary pluginSettings;
-    private static IntPtr tcMainWindowHandle = IntPtr.Zero;
+    private static List<TcPluginLoadingInfo> _loadedPlugins = new();
+    private static StringDictionary _pluginSettings;
+    private static IntPtr _tcMainWindowHandle = IntPtr.Zero;
 #if TRACE
-    private static bool writeTrace;
+    private static bool _writeTrace;
 #endif
 
     #endregion Variables
@@ -120,7 +122,7 @@ public static class TcPluginLoader
     #region Properties
 
     // Domain where plugin wrapper is started in.
-    private static readonly AppDomain MainDomain = AppDomain.CurrentDomain;
+    private static readonly AppDomain _mainDomain = AppDomain.CurrentDomain;
 
     public static string DomainInfo
     {
@@ -129,7 +131,7 @@ public static class TcPluginLoader
 #if TRACE
             var sb = new StringBuilder();
             var domain = AppDomain.CurrentDomain;
-            if (domain.Equals(MainDomain))
+            if (domain.Equals(_mainDomain))
             {
                 sb.AppendFormat("\nApp Domain: {0}.{1}", domain.Id, domain.FriendlyName);
                 sb.Append("\n  Assemblies loaded:");
@@ -158,7 +160,7 @@ public static class TcPluginLoader
                 }
             }
 
-            foreach (var pluginInfo in loadedPlugins)
+            foreach (var pluginInfo in _loadedPlugins)
             {
                 var tp = pluginInfo.Plugin;
                 if (tp != null)
@@ -180,15 +182,15 @@ public static class TcPluginLoader
 
     public static TcPlugin GetTcPlugin(string wrapperAssembly, PluginType pluginType)
     {
-        pluginSettings = GetPluginSettings(wrapperAssembly);
+        _pluginSettings = GetPluginSettings(wrapperAssembly);
 #if TRACE
-        writeTrace = Convert.ToBoolean(pluginSettings["writeTrace"]);
+        _writeTrace = Convert.ToBoolean(_pluginSettings["writeTrace"]);
         TraceOut(string.Format(TraceMsg1, wrapperAssembly), TraceMsg2);
 #endif
         TcPlugin tcPlugin;
         try
         {
-            var pluginAssembly = pluginSettings["pluginAssembly"];
+            var pluginAssembly = _pluginSettings["pluginAssembly"];
             if (string.IsNullOrEmpty(pluginAssembly))
             {
                 pluginAssembly = Path.ChangeExtension(wrapperAssembly, ".dll");
@@ -203,25 +205,25 @@ public static class TcPluginLoader
             TraceOut(pluginAssembly, TraceMsg3);
 #endif
             var pluginFolder = Path.GetDirectoryName(pluginAssembly);
-            pluginSettings["pluginFolder"] = pluginFolder;
+            _pluginSettings["pluginFolder"] = pluginFolder;
             var pluginAssemblyName = Path.GetFileNameWithoutExtension(pluginAssembly);
-            var title = pluginSettings["pluginTitle"] ?? pluginAssemblyName;
+            var title = _pluginSettings["pluginTitle"] ?? pluginAssemblyName;
             AppDomain pluginDomain;
-            var useSeparateDomain = !Convert.ToBoolean(pluginSettings["startInDefaultDomain"]);
+            var useSeparateDomain = !Convert.ToBoolean(_pluginSettings["startInDefaultDomain"]);
             if (useSeparateDomain)
             {
                 pluginDomain = CreatePluginAppDomain(pluginAssembly, title);
             }
             else
             {
-                pluginDomain = MainDomain;
-                MainDomain.AssemblyResolve += MainDomainResolveEventHandler;
+                pluginDomain = _mainDomain;
+                _mainDomain.AssemblyResolve += MainDomainResolveEventHandler;
 #if TRACE
                 TraceOut(null, "Load into Default AppDomain.");
 #endif
             }
 
-            var pluginClassName = pluginSettings["pluginClass"];
+            var pluginClassName = _pluginSettings["pluginClass"];
             // Create object implemented required TC plugin interface.
             tcPlugin = CreateTcPluginStub(pluginDomain, pluginAssembly, pluginType, null, ref pluginClassName);
             if (tcPlugin == null)
@@ -233,7 +235,7 @@ public static class TcPluginLoader
             }
             else
             {
-                tcPlugin.MainDomain = MainDomain;
+                tcPlugin.MainDomain = _mainDomain;
 #if TRACE
                 TraceOut(
                     string.Format(TraceMsg6, tcPlugin.Title, pluginClassName),
@@ -244,7 +246,7 @@ public static class TcPluginLoader
             // File System plugins only - try to load content plugin associated with current FS plugin
             if (pluginType == PluginType.FileSystem)
             {
-                var contentAssembly = pluginSettings.ContainsKey("contentAssembly") ? pluginSettings["contentAssembly"] : pluginAssembly;
+                var contentAssembly = _pluginSettings.ContainsKey("contentAssembly") ? _pluginSettings["contentAssembly"] : pluginAssembly;
                 if (!string.IsNullOrEmpty(contentAssembly))
                 {
                     if (!Path.IsPathRooted(contentAssembly))
@@ -252,15 +254,15 @@ public static class TcPluginLoader
                         contentAssembly = Path.Combine(wrapperFolder, contentAssembly);
                     }
 
-                    var contentClassName = pluginSettings["contentClass"];
+                    var contentClassName = _pluginSettings["contentClass"];
 #if TRACE
                     TraceOut(contentAssembly, TraceMsg8);
 #endif
 
                     // Create object implemented Content plugin interface.
-                    // Full FS plugin class name (with assembly name) 
+                    // Full FS plugin class name (with assembly name)
                     // is passed as "masterClassName" parameter.
-                    var fullPluginClassName = pluginClassName + ", " + pluginAssembly;
+                    var fullPluginClassName = $"{pluginClassName}, {pluginAssembly}";
                     try
                     {
                         var cntPlugin = (ContentPlugin)CreateTcPluginStub(
@@ -317,20 +319,13 @@ public static class TcPluginLoader
                 }
             }
 
-            if (useSeparateDomain)
-            {
-                tcPlugin.TcPluginEventHandler += HandleTcPluginEvent;
-            }
-            else
-            {
-                tcPlugin.TcPluginEventHandler += TcCallback.HandleTcPluginEvent;
-            }
-
+            tcPlugin.TcPluginEventHandler += useSeparateDomain ? HandleTcPluginEvent : TcCallback.HandleTcPluginEvent;
             tcPlugin.WrapperFileName = wrapperAssembly;
+
             var loadingInfo = FindPluginLoadingInfoByWrapperFileName(wrapperAssembly);
             if (loadingInfo == null)
             {
-                loadedPlugins.Add(new TcPluginLoadingInfo(wrapperAssembly, tcPlugin, pluginDomain));
+                _loadedPlugins.Add(new TcPluginLoadingInfo(wrapperAssembly, tcPlugin, pluginDomain));
             }
             else
             {
@@ -351,7 +346,7 @@ public static class TcPluginLoader
         finally
         {
 #if TRACE
-            writeTrace = false;
+            _writeTrace = false;
 #endif
         }
 
@@ -361,11 +356,11 @@ public static class TcPluginLoader
     // Creates new application domain for TC plugin.
     private static AppDomain CreatePluginAppDomain(string pluginAssembly, string title)
     {
-        MainDomain.ReflectionOnlyAssemblyResolve += ReflectionOnlyEventHandler;
+        _mainDomain.ReflectionOnlyAssemblyResolve += ReflectionOnlyEventHandler;
         var domainInfo = new AppDomainSetup
         {
             ApplicationBase = Path.GetDirectoryName(pluginAssembly),
-            ConfigurationFile = pluginAssembly + ".config"
+            ConfigurationFile = $"{pluginAssembly}.config"
         };
 
         var domain = AppDomain.CreateDomain(title, null, domainInfo);
@@ -398,21 +393,21 @@ public static class TcPluginLoader
         }
 
         // We expect the stub object for master class is already created
-        var fullPluginClassName = pluginClassName + ", " + pluginAssembly;
+        var fullPluginClassName = $"{pluginClassName}, {pluginAssembly}";
         if (fullPluginClassName.Equals(masterClassName))
         {
             return null;
         }
 
         // Create remote object in plugin AppDomain.
-        // Plugin constructor with "pluginSettings" parameter is called 
+        // Plugin constructor with "pluginSettings" parameter is called
         var tpObj = domain.CreateInstanceAndUnwrap(
             Path.GetFileNameWithoutExtension(pluginAssembly),
             pluginClassName,
             false,
             BindingFlags.Default,
             null,
-            new object[] { pluginSettings },
+            new object[] { _pluginSettings },
             null,
             null);
         if (tpObj == null)
@@ -462,16 +457,11 @@ public static class TcPluginLoader
         }
 
         var assembly = AssemblyReflectionOnlyLoadFrom(assemblyPath);
-        foreach (var type in assembly.GetExportedTypes())
-        {
-            if (type.GetInterface(TcUtils.PluginInterfaces[pluginType]) != null
-                && (string.IsNullOrEmpty(pluginClassName) || pluginClassName.Equals(type.Name)))
-            {
-                return type;
-            }
-        }
-
-        return null;
+        return assembly
+            .GetExportedTypes()
+            .FirstOrDefault(
+                type => type.GetInterface(TcUtils.PluginInterfaces[pluginType]) != null &&
+                        (string.IsNullOrEmpty(pluginClassName) || pluginClassName.Equals(type.Name)));
     }
 
     public static IListerHandlerBuilder GetListerHandlerBuilder(string wrapperAssembly)
@@ -479,33 +469,29 @@ public static class TcPluginLoader
         try
         {
             var loadingInfo = FindPluginLoadingInfoByWrapperFileName(wrapperAssembly);
-            if (loadingInfo != null)
+            if (loadingInfo is { Plugin: ListerPlugin listerPlugin })
             {
-                var plugin = loadingInfo.Plugin;
-                if (plugin != null && plugin is ListerPlugin)
+                IListerHandlerBuilder lhBuilder = null;
+                var guiType = listerPlugin.Settings["guiType"];
+                if (string.IsNullOrEmpty(guiType) || guiType.Equals(ListerPlugin.WfListerHandlerBuilderName))
                 {
-                    IListerHandlerBuilder lhBuilder = null;
-                    var guiType = plugin.Settings["guiType"];
-                    if (string.IsNullOrEmpty(guiType)
-                        || guiType.Equals(ListerPlugin.WFListerHandlerBuilderName))
-                    {
-                        lhBuilder = new WFListerHandlerBuilder();
-                    }
-                    else if (guiType.Equals(ListerPlugin.WPFListerHandlerBuilderName))
-                    {
-                        lhBuilder = new WPFListerHandlerBuilder();
-                    }
+                    lhBuilder = new WfListerHandlerBuilder();
+                }
+                else if (guiType.Equals(ListerPlugin.WpfListerHandlerBuilderName))
+                {
+                    lhBuilder = new WpfListerHandlerBuilder();
+                }
 
-                    if (lhBuilder != null)
-                    {
-                        lhBuilder.Plugin = (ListerPlugin)plugin;
-                        return lhBuilder;
-                    }
+                if (lhBuilder != null)
+                {
+                    lhBuilder.Plugin = listerPlugin;
+                    return lhBuilder;
                 }
             }
         }
         catch
         {
+            // ignored
         }
 
         return null;
@@ -522,13 +508,11 @@ public static class TcPluginLoader
         var result = new StringDictionary();
         var config = ConfigurationManager.OpenExeConfiguration(wrapperAssembly);
         var appSettings = config.AppSettings;
-        if (appSettings != null)
-        {
-            foreach (var key in appSettings.Settings.AllKeys)
-            {
-                result.Add(key, appSettings.Settings[key].Value);
-            }
-        }
+        if (appSettings == null)
+            return result;
+
+        foreach (var key in appSettings.Settings.AllKeys)
+            result.Add(key, appSettings.Settings[key].Value);
 
         return result;
     }
@@ -544,86 +528,41 @@ public static class TcPluginLoader
             return Assembly.ReflectionOnlyLoadFrom(
                 Path.Combine(
                     Path.GetDirectoryName(((AppDomain)sender).GetData("pluginDll").ToString()),
-                    args.Name.Split(',')[0] + ".dll"));
+                    $"{args.Name.Split(',')[0]}.dll"));
         }
     }
 
     private static Assembly MainDomainResolveEventHandler(object sender, ResolveEventArgs args) =>
-        AssemblyLoadFrom(Path.Combine(pluginSettings["pluginFolder"], args.Name.Split(',')[0] + ".dll"));
+        AssemblyLoadFrom(Path.Combine(_pluginSettings["pluginFolder"], $"{args.Name.Split(',')[0]}.dll"));
 
     #endregion Plugin Loading
 
     #region Other Methods
 
-    internal static TcPlugin GetTcPluginById(string id)
-    {
-        foreach (var pluginLoadingInfo in loadedPlugins)
-        {
-            if (pluginLoadingInfo.Plugin.PluginId.Equals(id))
-            {
-                return pluginLoadingInfo.Plugin;
-            }
-        }
+    internal static TcPlugin GetTcPluginById(string id) =>
+        _loadedPlugins
+            .Where(pluginLoadingInfo => pluginLoadingInfo.Plugin.PluginId.Equals(id))
+            .Select(pluginLoadingInfo => pluginLoadingInfo.Plugin)
+            .FirstOrDefault();
 
-        return null;
-    }
+    public static AppDomain GetPluginDomainByFileName(string pluginFile) =>
+        _loadedPlugins
+            .Where(pluginLoadingInfo => pluginLoadingInfo.WrapperFileName.Equals(pluginFile))
+            .Select(pluginLoadingInfo => pluginLoadingInfo.Domain)
+            .FirstOrDefault();
 
-    public static AppDomain GetPluginDomainByFileName(string pluginFile)
-    {
-        foreach (var pluginLoadingInfo in loadedPlugins)
-        {
-            if (pluginLoadingInfo.WrapperFileName.Equals(pluginFile))
-            {
-                return pluginLoadingInfo.Domain;
-            }
-        }
+    public static TcPluginLoadingInfo FindPluginLoadingInfoByPluginId(string pluginId) =>
+        _loadedPlugins.FirstOrDefault(pluginLoadingInfo => pluginLoadingInfo.Plugin.PluginId.Equals(pluginId));
 
-        return null;
-    }
+    public static TcPluginLoadingInfo FindPluginLoadingInfoByWrapperFileName(string pluginWrapperFileName) =>
+        _loadedPlugins.FirstOrDefault(pluginLoadingInfo => pluginLoadingInfo.WrapperFileName.Equals(pluginWrapperFileName));
 
-    public static TcPluginLoadingInfo FindPluginLoadingInfoByPluginId(string pluginId)
-    {
-        foreach (var pluginLoadingInfo in loadedPlugins)
-        {
-            if (pluginLoadingInfo.Plugin.PluginId.Equals(pluginId))
-            {
-                return pluginLoadingInfo;
-            }
-        }
-
-        return null;
-    }
-
-    public static TcPluginLoadingInfo FindPluginLoadingInfoByWrapperFileName(string pluginWrapperFileName)
-    {
-        foreach (var pluginLoadingInfo in loadedPlugins)
-        {
-            if (pluginLoadingInfo.WrapperFileName.Equals(pluginWrapperFileName))
-            {
-                return pluginLoadingInfo;
-            }
-        }
-
-        return null;
-    }
-
-    public static TcPluginLoadingInfo FindPluginLoadingInfoByPluginNumber(int pluginNumber)
-    {
-        foreach (var pluginLoadingInfo in loadedPlugins)
-        {
-            if (pluginLoadingInfo.PluginNumber == pluginNumber)
-            {
-                return pluginLoadingInfo;
-            }
-        }
-
-        return null;
-    }
+    public static TcPluginLoadingInfo FindPluginLoadingInfoByPluginNumber(int pluginNumber) =>
+        _loadedPlugins.FirstOrDefault(pluginLoadingInfo => pluginLoadingInfo.PluginNumber == pluginNumber);
 
     public static PluginLifetimeStatus CheckPluginLifetimeStatus(Exception ex)
     {
-        var pluginDisconnected =
-            ex is RemotingException && ex.Message.EndsWith(LifetimeExpiredMsgEnd);
+        var pluginDisconnected = ex is RemotingException && ex.Message.EndsWith(LifetimeExpiredMsgEnd);
         if (!pluginDisconnected)
         {
             return PluginLifetimeStatus.Active;
@@ -632,9 +571,7 @@ public static class TcPluginLoader
         var pluginWrapperFile = Assembly.GetCallingAssembly().Location;
         var loadingInfo = FindPluginLoadingInfoByWrapperFileName(pluginWrapperFile);
         if (loadingInfo == null)
-        {
             return PluginLifetimeStatus.NotLoaded;
-        }
 
         var stackTrace = new StackTrace(true);
 #if TRACE
@@ -647,15 +584,15 @@ public static class TcPluginLoader
             foreach (var sf in stackFrames)
             {
                 var declaringType = sf.GetMethod().DeclaringType;
-                if (declaringType != null && declaringType.FullName.StartsWith("OY.TotalCommander.WfxWrapper") &&
-                    !sf.GetMethod().Name.Equals("ProcessException"))
-                {
+                if (declaringType == null ||
+                    !declaringType.FullName.StartsWith("OY.TotalCommander.WfxWrapper") ||
+                    sf.GetMethod().Name.Equals("ProcessException"))
+                    continue;
 #if TRACE
-                    text = string.Format(TraceMsg15, declaringType.FullName.Substring(29), sf.GetMethod().Name);
-                    TraceError(text, category);
+                text = string.Format(TraceMsg15, declaringType.FullName.Substring(29), sf.GetMethod().Name);
+                TraceError(text, category);
 #endif
-                    break;
-                }
+                break;
             }
         }
 
@@ -668,12 +605,11 @@ public static class TcPluginLoader
             {
                 AppDomain.Unload(pluginDomain);
 #if TRACE
-                text = "Plugin Lifetime Expired - Plugin \"" + pluginWrapperFile + "\" was disconnected from TC.";
+                text = $"Plugin Lifetime Expired - Plugin \"{pluginWrapperFile}\" was disconnected from TC.";
                 TraceError(text, category);
 #endif
                 MessageBox.Show(
-                    "Plugin " + Path.GetFileNameWithoutExtension(pluginWrapperFile)
-                              + " has expired and was disconnected From TC.",
+                    $"Plugin {Path.GetFileNameWithoutExtension(pluginWrapperFile)} has expired and was disconnected From TC.",
                     "Plugin disconnected",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -683,7 +619,7 @@ public static class TcPluginLoader
             catch (Exception e)
             {
 #if TRACE
-                text = "Unload ERROR: " + e.Message;
+                text = $"Unload ERROR: {e.Message}";
                 TraceError(text, category);
 #endif
             }
@@ -691,7 +627,7 @@ public static class TcPluginLoader
         else
         {
             MessageBox.Show(
-                "Plugin " + Path.GetFileNameWithoutExtension(pluginWrapperFile) + " has expired.",
+                $"Plugin {Path.GetFileNameWithoutExtension(pluginWrapperFile)} has expired.",
                 "Plugin expired",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -709,14 +645,11 @@ public static class TcPluginLoader
 #if TRACE
         var pluginTitle =
             plugin == null || pluginDisconnected ? "NULL" : plugin.TraceTitle;
-        TcTrace.TraceError(string.Format("{0}: {1}", callSignature, ex.Message), pluginTitle);
+        TcTrace.TraceError($"{callSignature}: {ex.Message}", pluginTitle);
 #endif
-        if (ex is MethodNotSupportedException)
+        if (ex is MethodNotSupportedException { Mandatory: false })
         {
-            if (!((MethodNotSupportedException)ex).Mandatory)
-            {
-                return;
-            }
+            return;
         }
 
         if (plugin == null || pluginDisconnected || plugin.ShowErrorDialog)
@@ -729,29 +662,28 @@ public static class TcPluginLoader
 
     public static void FillLoadingInfo(TcPlugin plugin)
     {
-        var loadingInfo =
-            FindPluginLoadingInfoByWrapperFileName(plugin.WrapperFileName);
-        if (loadingInfo != null)
-        {
-            loadingInfo.PluginNumber = plugin.PluginNumber;
-            if (plugin.Password != null)
-            {
-                loadingInfo.CryptoNumber = plugin.Password.GetCryptoNumber();
-                loadingInfo.CryptoFlags = plugin.Password.GetFlags();
-            }
+        var loadingInfo = FindPluginLoadingInfoByWrapperFileName(plugin.WrapperFileName);
+        if (loadingInfo == null)
+            return;
 
-            if (plugin is FsPlugin)
-            {
-                loadingInfo.UnloadExpired = ((FsPlugin)plugin).UnloadExpired;
-            }
+        loadingInfo.PluginNumber = plugin.PluginNumber;
+        if (plugin.Password != null)
+        {
+            loadingInfo.CryptoNumber = plugin.Password.GetCryptoNumber();
+            loadingInfo.CryptoFlags = plugin.Password.GetFlags();
+        }
+
+        if (plugin is FsPlugin fsPlugin)
+        {
+            loadingInfo.UnloadExpired = fsPlugin.UnloadExpired;
         }
     }
 
     public static void SetTcMainWindowHandle(IntPtr handle)
     {
-        if (tcMainWindowHandle == IntPtr.Zero)
+        if (_tcMainWindowHandle == IntPtr.Zero)
         {
-            tcMainWindowHandle = handle;
+            _tcMainWindowHandle = handle;
         }
     }
 
@@ -759,25 +691,25 @@ public static class TcPluginLoader
 
     private static void OpenTcPluginHome()
     {
-        if (tcMainWindowHandle != IntPtr.Zero)
-        {
-            TcWindow.SendMessage(tcMainWindowHandle, CmOpenNetwork);
-            Thread.Sleep(500);
-        }
+        if (_tcMainWindowHandle == IntPtr.Zero)
+            return;
+
+        TcWindow.SendMessage(_tcMainWindowHandle, CmOpenNetwork);
+        Thread.Sleep(500);
     }
 
 #if TRACE
     private static void TraceOut(string text, string category)
     {
-        if (writeTrace)
-        {
-            if (category.Equals("Start"))
-            {
-                TcTrace.TraceDelimiter();
-            }
+        if (!_writeTrace)
+            return;
 
-            TcTrace.TraceOut(TraceLevel.Warning, text, category);
+        if (category.Equals("Start"))
+        {
+            TcTrace.TraceDelimiter();
         }
+
+        TcTrace.TraceOut(TraceLevel.Warning, text, category);
     }
 
     private static void TraceError(string text, string category) => TcTrace.TraceOut(TraceLevel.Error, text, category);

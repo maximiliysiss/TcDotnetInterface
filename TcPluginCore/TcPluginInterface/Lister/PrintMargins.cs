@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace OY.TotalCommander.TcPluginInterface.Lister;
+namespace TcPluginInterface.Lister;
 
 // Used as parameter type for Print method
 [Serializable]

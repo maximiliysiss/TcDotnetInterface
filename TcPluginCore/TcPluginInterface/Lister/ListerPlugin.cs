@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Drawing;
 #if TRACE
-using System.Diagnostics;
 #endif
 
-namespace OY.TotalCommander.TcPluginInterface.Lister;
+namespace TcPluginInterface.Lister;
 
 public class ListerPlugin : TcPlugin, IListerPlugin
 {
     #region Constructors
 
-    public ListerPlugin(StringDictionary pluginSettings)
-        : base(pluginSettings)
+    public ListerPlugin(StringDictionary pluginSettings) : base(pluginSettings)
     {
         BitmapBackgroundColor = Color.White;
         ListerHandle = IntPtr.Zero;
@@ -23,13 +22,13 @@ public class ListerPlugin : TcPlugin, IListerPlugin
     #region Constants
 
     // Lister handler builder load
-    public const string WFListerHandlerBuilderName = "WinForms";
-    public const string WPFListerHandlerBuilderName = "WPF";
+    public const string WfListerHandlerBuilderName = "WinForms";
+    public const string WpfListerHandlerBuilderName = "WPF";
 
-    public const string WPFListerHandlerBuilderAssembly =
+    public const string WpfListerHandlerBuilderAssembly =
         "TcWpfListerHandlerBuilder, Version=1.3.4.2, Culture=neutral, PublicKeyToken=c7b2f9ba8e544bfe";
 
-    public const string WPFListerHandlerBuilderClass = "OY.TotalCommander.TcPluginInterface.Lister.WPFListerHandlerBuilder";
+    public const string WpfListerHandlerBuilderClass = "OY.TotalCommander.TcPluginInterface.Lister.WPFListerHandlerBuilder";
 
     #endregion Constants
 
@@ -69,13 +68,8 @@ public class ListerPlugin : TcPlugin, IListerPlugin
 
     public virtual ListerResult SendCommand(object control, ListerCommand command, ShowFlags parameter) => ListerResult.Error;
 
-    public virtual ListerResult Print(
-        object control,
-        string fileToPrint,
-        string defPrinter,
-        PrintFlags printFlags,
-        PrintMargins margins) =>
-        ListerResult.Error;
+    public virtual ListerResult Print(object control, string fileToPrint, string defPrinter, PrintFlags printFlags, PrintMargins margins)
+        => ListerResult.Error;
 
     public virtual int NotificationReceived(object control, int message, int wParam, int lParam) => 0;
 
@@ -89,8 +83,8 @@ public class ListerPlugin : TcPlugin, IListerPlugin
 
     #region Callback Procedures
 
-    // Use following methods to send WM_COMMAND message to the parent window 
-    // to set a new percentage value in Lister's title bar, 
+    // Use following methods to send WM_COMMAND message to the parent window
+    // to set a new percentage value in Lister's title bar,
     // or to check some menu items like fonts or word wrap mode.
     // (See WM_COMMAND in "Lister Plugin Interface" help file)
 
@@ -139,35 +133,31 @@ public class ListerPlugin : TcPlugin, IListerPlugin
 
     private void ListerPluginEvent(ListerMessage message, int value)
     {
-        if (ListerHandle != IntPtr.Zero && ParentHandle != IntPtr.Zero)
-        {
-            var wParam = (int)message * 0x10000 + value;
-            NativeMethods.PostMessage(ParentHandle, NativeMethods.WM_COMMAND, new IntPtr(wParam), ListerHandle);
+        if (ListerHandle == IntPtr.Zero || ParentHandle == IntPtr.Zero)
+            return;
+
+        var wParam = (int)message * 0x10000 + value;
+        NativeMethods.PostMessage(ParentHandle, NativeMethods.WM_COMMAND, new IntPtr(wParam), ListerHandle);
 #if TRACE
-            if (WriteTrace)
-            {
-                TraceProc(
-                    TraceLevel.Info,
-                    string.Format("  << Callback: ({0}) {1} = {2}", ListerHandle, message.ToString(), value));
-            }
-#endif
+        if (WriteTrace)
+        {
+            TraceProc(
+                TraceLevel.Info,
+                $"  << Callback: ({ListerHandle}) {message.ToString()} = {value}");
         }
+#endif
     }
 
     public void CloseParentWindow()
     {
         if (ListerHandle != IntPtr.Zero && ParentHandle != IntPtr.Zero && !IsQuickView)
-        {
             NativeMethods.PostMessage(ParentHandle, NativeMethods.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
-        }
     }
 
     public void SendKeyToParentWindow(int keyCode)
     {
         if (ListerHandle != IntPtr.Zero && ParentHandle != IntPtr.Zero)
-        {
             NativeMethods.PostMessage(ParentHandle, NativeMethods.WM_KEYDOWN, new IntPtr(keyCode), IntPtr.Zero);
-        }
     }
 
     #endregion Callback Procedures

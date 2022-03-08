@@ -1,4 +1,4 @@
-namespace OY.TotalCommander.TcPluginInterface.QuickSearch;
+namespace TcPluginInterface.QuickSearch;
 
 public interface IQuickSearchPlugin
 {

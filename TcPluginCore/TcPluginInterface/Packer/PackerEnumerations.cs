@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.Packer;
+namespace TcPluginInterface.Packer;
 // Enumerations below are managed wrappers for corresponding integer flags discribed in 
 // TC "WCX Writer's Reference" (see "Packer extensions" -> "Interface description" on www.ghisler.com/plugins.htm) 
 
@@ -74,7 +74,7 @@ public enum PackerCapabilities
 // Used as result type for most of Packer plugin methods
 public enum PackerResult
 {
-    OK = 0, // Success (for PackToMem - there is more data)
+    Ok = 0, // Success (for PackToMem - there is more data)
     PackToMemDone, // For PackToMem only - success, there is no more data
 
     // Error codes

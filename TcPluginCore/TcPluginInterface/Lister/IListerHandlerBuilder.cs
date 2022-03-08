@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.Lister;
+namespace TcPluginInterface.Lister;
 
 public interface IListerHandlerBuilder
 {

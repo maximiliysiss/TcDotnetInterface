@@ -3,11 +3,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using OY.TotalCommander.TcPluginInterface;
-using OY.TotalCommander.TcPluginInterface.Lister;
-using OY.TotalCommander.TcPluginTools;
+using TcPluginInterface;
+using TcPluginInterface.Lister;
+using TcPluginTools;
 
-namespace OY.TotalCommander.WlxWrapper;
+namespace WlxWrapper;
 
 public class ListerWrapper
 {
@@ -17,19 +17,19 @@ public class ListerWrapper
 
     #region Variables
 
-    private static ListerPlugin plugin;
-    private static readonly string pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
-    private static string callSignature;
+    private static ListerPlugin _plugin;
+    private static readonly string _pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
+    private static string _callSignature;
 
     #endregion Variables
 
     #region Properties
 
     private static ListerPlugin Plugin =>
-        plugin ??
-        (plugin = (ListerPlugin)TcPluginLoader.GetTcPlugin(pluginWrapperDll, PluginType.Lister));
+        _plugin ??
+        (_plugin = (ListerPlugin)TcPluginLoader.GetTcPlugin(_pluginWrapperDll, PluginType.Lister));
 
-    private static IListerHandlerBuilder ListerHandlerBuilder => TcPluginLoader.GetListerHandlerBuilder(pluginWrapperDll);
+    private static IListerHandlerBuilder ListerHandlerBuilder => TcPluginLoader.GetListerHandlerBuilder(_pluginWrapperDll);
 
     #endregion Properties
 
@@ -40,10 +40,7 @@ public class ListerWrapper
     #region ListLoad
 
     [DllExport(EntryPoint = "ListLoad")]
-    public static IntPtr Load(
-        IntPtr parentWin,
-        [MarshalAs(UnmanagedType.LPStr)] string fileToLoad,
-        int flags) =>
+    public static IntPtr Load(IntPtr parentWin, [MarshalAs(UnmanagedType.LPStr)] string fileToLoad, int flags) =>
         LoadW(parentWin, fileToLoad, flags);
 
     [DllExport(EntryPoint = "ListLoadW")]
@@ -54,7 +51,7 @@ public class ListerWrapper
     {
         var listerHandle = IntPtr.Zero;
         var showFlags = (ShowFlags)flags;
-        callSignature = string.Format("Load ({0}, {1})", fileToLoad, showFlags.ToString());
+        _callSignature = $"Load ({fileToLoad}, {showFlags.ToString()})";
         try
         {
             var listerControl = Plugin.Load(fileToLoad, showFlags);
@@ -104,11 +101,7 @@ public class ListerWrapper
     {
         var result = ListerResult.Error;
         var showFlags = (ShowFlags)flags;
-        callSignature = string.Format(
-            "LoadNext ({0}, {1}, {2})",
-            listWin.ToString(),
-            fileToLoad,
-            showFlags.ToString());
+        _callSignature = $"LoadNext ({listWin.ToString()}, {fileToLoad}, {showFlags.ToString()})";
         try
         {
             var listerControl = TcHandles.GetObject(listWin);
@@ -131,14 +124,14 @@ public class ListerWrapper
     [DllExport(EntryPoint = "ListCloseWindow")]
     public static void CloseWindow(IntPtr listWin)
     {
-        callSignature = string.Format("CloseWindow ({0})", listWin.ToString());
+        _callSignature = $"CloseWindow ({listWin.ToString()})";
         try
         {
             var listerControl = TcHandles.GetObject(listWin);
             Plugin.CloseWindow(listerControl);
             var count = TcHandles.RemoveHandle(listWin);
             NativeMethods.DestroyWindow(listWin);
-            TraceCall(TraceLevel.Warning, string.Format("{0} calls.", count));
+            TraceCall(TraceLevel.Warning, $"{count} calls.");
         }
         catch (Exception ex)
         {
@@ -154,7 +147,7 @@ public class ListerWrapper
     [DllExport(EntryPoint = "ListGetDetectString")]
     public static void GetDetectString(IntPtr detectString, int maxLen)
     {
-        callSignature = "GetDetectString";
+        _callSignature = "GetDetectString";
         try
         {
             TcUtils.WriteStringAnsi(Plugin.DetectString, detectString, maxLen);
@@ -185,11 +178,7 @@ public class ListerWrapper
     {
         var result = ListerResult.Error;
         var sp = (SearchParameter)searchParameter;
-        callSignature = string.Format(
-            "SearchText ({0}, {1}, {2})",
-            listWin.ToString(),
-            searchString,
-            sp.ToString());
+        _callSignature = $"SearchText ({listWin.ToString()}, {searchString}, {sp.ToString()})";
         try
         {
             var listerControl = TcHandles.GetObject(listWin);
@@ -215,11 +204,7 @@ public class ListerWrapper
         var result = ListerResult.Error;
         var cmd = (ListerCommand)command;
         var par = (ShowFlags)parameter;
-        callSignature = string.Format(
-            "SendCommand ({0}, {1}, {2})",
-            listWin.ToString(),
-            cmd.ToString(),
-            par.ToString());
+        _callSignature = $"SendCommand ({listWin.ToString()}, {cmd.ToString()}, {par.ToString()})";
         try
         {
             var listerControl = TcHandles.GetObject(listWin);
@@ -258,12 +243,7 @@ public class ListerWrapper
     {
         var result = ListerResult.Error;
         var printFlags = (PrintFlags)flags;
-        callSignature = string.Format(
-            "Print ({0}, {1}, {2}, {3})",
-            listWin.ToString(),
-            fileToPrint,
-            defPrinter,
-            printFlags.ToString());
+        _callSignature = $"Print ({listWin.ToString()}, {fileToPrint}, {defPrinter}, {printFlags.ToString()})";
         try
         {
             var listerControl = TcHandles.GetObject(listWin);
@@ -287,12 +267,7 @@ public class ListerWrapper
     public static int NotificationReceived(IntPtr listWin, int message, int wParam, int lParam) // 32, 64 ???
     {
         var result = 0;
-        callSignature = string.Format(
-            "NotificationReceived ({0}, {1}, {2}, {3})",
-            listWin.ToString(),
-            message,
-            wParam,
-            lParam);
+        _callSignature = $"NotificationReceived ({listWin.ToString()}, {message}, {wParam}, {lParam})";
         try
         {
             var listerControl = TcHandles.GetObject(listWin);
@@ -316,7 +291,7 @@ public class ListerWrapper
     [DllExport(EntryPoint = "ListSetDefaultParams")]
     public static void SetDefaultParams(ref PluginDefaultParams defParams)
     {
-        callSignature = "SetDefaultParams";
+        _callSignature = "SetDefaultParams";
         try
         {
             Plugin.DefaultParams = defParams;
@@ -355,11 +330,7 @@ public class ListerWrapper
     public static IntPtr GetPreviewBitmapInternal(string fileToLoad, int width, int height, byte[] contentBuf)
     {
         IntPtr result;
-        callSignature = string.Format(
-            "GetPreviewBitmap '{0}' ({1} x {2})",
-            fileToLoad,
-            width,
-            height);
+        _callSignature = $"GetPreviewBitmap '{fileToLoad}' ({width} x {height})";
         try
         {
             var bitmap = Plugin.GetPreviewBitmap(fileToLoad, width, height, contentBuf);
@@ -371,8 +342,8 @@ public class ListerWrapper
 #if TRACE
             TcTrace.TraceOut(
                 TraceLevel.Error,
-                string.Format("{0}: {1}", callSignature, ex.Message),
-                string.Format("ERROR ({0})", Plugin.TraceTitle));
+                $"{_callSignature}: {ex.Message}",
+                $"ERROR ({Plugin.TraceTitle})");
 #endif
             result = IntPtr.Zero;
         }
@@ -388,10 +359,7 @@ public class ListerWrapper
     public static int SearchDialog(IntPtr listWin, int findNext)
     {
         var result = ListerResult.Error;
-        callSignature = string.Format(
-            "SearchDialog ({0}, {1})",
-            listWin.ToString(),
-            findNext);
+        _callSignature = $"SearchDialog ({listWin.ToString()}, {findNext})";
         try
         {
             var listerControl = TcHandles.GetObject(listWin);
@@ -414,12 +382,12 @@ public class ListerWrapper
 
     #region Tracing & Exceptions
 
-    public static void ProcessException(Exception ex) => TcPluginLoader.ProcessException(plugin, false, callSignature, ex);
+    public static void ProcessException(Exception ex) => TcPluginLoader.ProcessException(_plugin, false, _callSignature, ex);
 
     public static void TraceCall(TraceLevel level, string result)
     {
-        TcTrace.TraceCall(plugin, level, callSignature, result);
-        callSignature = null;
+        TcTrace.TraceCall(_plugin, level, _callSignature, result);
+        _callSignature = null;
     }
 
     #endregion Tracing & Exceptions

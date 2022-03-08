@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace OY.TotalCommander.TcPluginTools;
+namespace TcPluginTools;
 
 public partial class ErrorDialog : Form
 {
@@ -16,49 +16,53 @@ public partial class ErrorDialog : Form
 
     public static void Show(string callSignature, Exception ex)
     {
-        using (var errDlg = new ErrorDialog())
+        using var errDlg = new ErrorDialog();
+        if (!string.IsNullOrEmpty(callSignature))
         {
-            if (!string.IsNullOrEmpty(callSignature))
-            {
-                errDlg.lblException.Text = callSignature;
-            }
+            errDlg.lblException.Text = callSignature;
+        }
 
-            errDlg.FormatException(ex, 0);
-            errDlg.btnClose.Focus();
-            if (errDlg.ShowDialog() == DialogResult.Abort)
-            {
-                throw new OperationCanceledException("Execution terminated by user.", ex);
-            }
+        errDlg.FormatException(ex, 0);
+        errDlg.btnClose.Focus();
+        if (errDlg.ShowDialog() == DialogResult.Abort)
+        {
+            throw new OperationCanceledException("Execution terminated by user.", ex);
         }
     }
 
     private void FormatException(Exception ex, int ident)
     {
-        if (ident == 0)
+        while (true)
         {
-            rtbCallStack.Clear();
-            if (lblException.Text.Equals("ERROR"))
+            if (ident == 0)
             {
-                lblException.Text = ex.GetType().Name + "  (detail)";
+                rtbCallStack.Clear();
+                if (lblException.Text.Equals("ERROR"))
+                {
+                    lblException.Text = $"{ex.GetType().Name}  (detail)";
+                }
+                //txtException.Text = ex.Message;
             }
-            //txtException.Text = ex.Message;
-        }
-        else
-        {
-            rtbCallStack.SelectionFont = new Font("Courier", 10f);
-            rtbCallStack.SelectedText = Environment.NewLine;
-        }
+            else
+            {
+                rtbCallStack.SelectionFont = new Font("Courier", 10f);
+                rtbCallStack.SelectedText = Environment.NewLine;
+            }
 
-        rtbCallStack.SelectionIndent = ident * 20;
-        rtbCallStack.SelectionFont = new Font("Courier", 8f, FontStyle.Bold);
-        rtbCallStack.SelectedText = ex.GetType().Name + ": " + ex.Message + Environment.NewLine;
-        rtbCallStack.SelectionIndent = ident * 20;
-        rtbCallStack.SelectionFont = new Font("Courier", 8f);
-        rtbCallStack.SelectedText = ex.StackTrace + Environment.NewLine;
-        ident++;
-        if (ex.InnerException != null)
-        {
-            FormatException(ex.InnerException, ident);
+            rtbCallStack.SelectionIndent = ident * 20;
+            rtbCallStack.SelectionFont = new Font("Courier", 8f, FontStyle.Bold);
+            rtbCallStack.SelectedText = $"{ex.GetType().Name}: {ex.Message}{Environment.NewLine}";
+            rtbCallStack.SelectionIndent = ident * 20;
+            rtbCallStack.SelectionFont = new Font("Courier", 8f);
+            rtbCallStack.SelectedText = ex.StackTrace + Environment.NewLine;
+            ident++;
+            if (ex.InnerException != null)
+            {
+                ex = ex.InnerException;
+                continue;
+            }
+
+            break;
         }
     }
 

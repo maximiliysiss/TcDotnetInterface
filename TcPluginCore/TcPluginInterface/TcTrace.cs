@@ -1,14 +1,14 @@
 using System;
 using System.Diagnostics;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 public static class TcTrace
 {
     public static void TraceCall(TcPlugin plugin, TraceLevel level, string callSignature, string result)
     {
 #if TRACE
-        var text = callSignature + (string.IsNullOrEmpty(result) ? null : ": " + result);
+        var text = callSignature + (string.IsNullOrEmpty(result) ? null : $": {result}");
         if (plugin != null)
         {
             plugin.OnTcTrace(level, text);
@@ -28,8 +28,7 @@ public static class TcTrace
 
     public static readonly TraceSwitch TcPluginTraceSwitch = new("DotNetPlugins", "All .NET plugins", "Warning");
 
-    public static void TraceError(string text, string pluginTitle) =>
-        TraceOut(TraceLevel.Error, text, string.Format("ERROR ({0})", pluginTitle));
+    public static void TraceError(string text, string pluginTitle) => TraceOut(TraceLevel.Error, text, $"ERROR ({pluginTitle})");
 
     public static void TraceOut(TraceLevel level, string text, string category) => TraceOut(level, text, category, 0);
 
@@ -46,7 +45,7 @@ public static class TcTrace
                 Trace.IndentLevel--;
             }
 
-            Trace.WriteLine(text, timeStr + " - " + category);
+            Trace.WriteLine(text, $"{timeStr} - {category}");
             if (indent > 0)
             {
                 Trace.IndentLevel++;

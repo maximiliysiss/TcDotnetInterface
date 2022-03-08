@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.Remoting.Lifetime;
 using System.Security.Permissions;
+using System.Text;
 using System.Threading;
 #if TRACE
-using System.Text;
 #endif
 
-namespace OY.TotalCommander.TcPluginInterface
+namespace TcPluginInterface
 {
     [Serializable]
     public class TcPlugin : MarshalByRefObject
@@ -20,7 +20,7 @@ namespace OY.TotalCommander.TcPluginInterface
         public override object InitializeLifetimeService()
         {
             var lease = (ILease)base.InitializeLifetimeService();
-            if (lease != null && lease.CurrentState == LeaseState.Initial)
+            if (lease is { CurrentState: LeaseState.Initial })
             {
                 // By default we set infinite lifetime for each created plugin (initialLifeTime = 0)
                 lease.InitialLeaseTime = TimeSpan.Zero;
@@ -33,10 +33,9 @@ namespace OY.TotalCommander.TcPluginInterface
 
         #region Variables
 
-        private static readonly string TcFolder =
-            Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+        private static readonly string _tcFolder = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
 
-        private int mainThreadId;
+        private int _mainThreadId;
 
         #endregion Variables
 
@@ -57,31 +56,31 @@ namespace OY.TotalCommander.TcPluginInterface
                 var domain = AppDomain.CurrentDomain;
                 sb.Append("-----------");
                 sb.AppendFormat("\nPlugin: {0}", Title);
-                if (!domain.Equals(MainDomain))
+                if (domain.Equals(MainDomain))
+                    return sb.ToString();
+
+                sb.AppendFormat("\nApp Domain: {0}.{1}", domain.Id, domain.FriendlyName);
+                sb.Append("\n  Assemblies loaded:");
+                foreach (var a in domain.GetAssemblies())
                 {
-                    sb.AppendFormat("\nApp Domain: {0}.{1}", domain.Id, domain.FriendlyName);
-                    sb.Append("\n  Assemblies loaded:");
-                    foreach (var a in domain.GetAssemblies())
+                    var aName = a.GetName().Name;
+                    if (aName.Equals("<unknown>"))
                     {
-                        var aName = a.GetName().Name;
-                        if (aName.Equals("<unknown>"))
+                        sb.AppendFormat("\n\t{0}", aName);
+                    }
+                    else
+                    {
+                        if (a.GlobalAssemblyCache)
                         {
-                            sb.AppendFormat("\n\t{0}", aName);
+                            sb.AppendFormat("\n\t{{ GAC }} {0}", Path.GetFileName(a.Location));
+                        }
+                        else if (string.IsNullOrEmpty(a.Location))
+                        {
+                            sb.AppendFormat("\n\t[{0}]", a.FullName);
                         }
                         else
                         {
-                            if (a.GlobalAssemblyCache)
-                            {
-                                sb.AppendFormat("\n\t{{ GAC }} {0}", Path.GetFileName(a.Location));
-                            }
-                            else if (string.IsNullOrEmpty(a.Location))
-                            {
-                                sb.AppendFormat("\n\t[{0}]", a.FullName);
-                            }
-                            else
-                            {
-                                sb.AppendFormat("\n\t{0} [ver. {1}]", a.Location, a.GetName().Version);
-                            }
+                            sb.AppendFormat("\n\t{0} [ver. {1}]", a.Location, a.GetName().Version);
                         }
                     }
                 }
@@ -93,7 +92,7 @@ namespace OY.TotalCommander.TcPluginInterface
             }
         }
 
-        protected bool IsBackgroundThread => Thread.CurrentThread.ManagedThreadId != mainThreadId;
+        protected bool IsBackgroundThread => Thread.CurrentThread.ManagedThreadId != _mainThreadId;
 
         public TcPlugin MasterPlugin { get; set; }
 
@@ -130,7 +129,7 @@ namespace OY.TotalCommander.TcPluginInterface
             PluginId = Guid.NewGuid().ToString();
             DataBufferName = Guid.NewGuid().ToString();
             PluginNumber = -1;
-            mainThreadId = Thread.CurrentThread.ManagedThreadId;
+            _mainThreadId = Thread.CurrentThread.ManagedThreadId;
             if (pluginSettings != null)
             {
                 Settings = pluginSettings;
@@ -150,13 +149,11 @@ namespace OY.TotalCommander.TcPluginInterface
         public virtual int OnTcPluginEvent(PluginEventArgs e)
         {
             var handler = TcPluginEventHandler;
-            if (handler != null)
-            {
-                handler(this, e);
-                return e.Result;
-            }
+            if (handler == null)
+                return 0;
 
-            return 0;
+            handler(this, e);
+            return e.Result;
         }
 
         #endregion Plugin Event Handler
@@ -217,13 +214,11 @@ namespace OY.TotalCommander.TcPluginInterface
         protected void SetPluginFolder(string folderKey, string defaultFolder)
         {
             var folderName = Settings.ContainsKey(folderKey) ? Settings[folderKey] : defaultFolder;
-            if (!string.IsNullOrEmpty(folderName))
-            {
-                folderName = folderName
-                    .Replace("%TC%", TcFolder)
-                    .Replace("%PLUGIN%", PluginFolder);
-                Settings[folderKey] = folderName;
-            }
+            if (string.IsNullOrEmpty(folderName))
+                return;
+
+            folderName = folderName.Replace("%TC%", _tcFolder).Replace("%PLUGIN%", PluginFolder);
+            Settings[folderKey] = folderName;
         }
 
         #endregion Other Methods

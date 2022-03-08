@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 // see help for CA1060
 [CLSCompliant(false)]

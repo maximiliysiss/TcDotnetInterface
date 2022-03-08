@@ -2,14 +2,13 @@
 using System.Collections.Specialized;
 using System.Globalization;
 
-namespace OY.TotalCommander.TcPluginInterface.Content;
+namespace TcPluginInterface.Content;
 
 public class ContentPlugin : TcPlugin, IContentPlugin
 {
     #region Constructors
 
-    public ContentPlugin(StringDictionary pluginSettings)
-        : base(pluginSettings)
+    public ContentPlugin(StringDictionary pluginSettings) : base(pluginSettings)
     {
     }
 
@@ -26,9 +25,7 @@ public class ContentPlugin : TcPlugin, IContentPlugin
     public virtual string DetectString { get; set; }
 
     public override string TraceTitle =>
-        Convert.ToBoolean(Settings["useTitleForTrace"]) || PluginNumber == 0
-            ? Title
-            : PluginNumber.ToString(CultureInfo.InvariantCulture);
+        Convert.ToBoolean(Settings["useTitleForTrace"]) || PluginNumber == 0 ? Title : PluginNumber.ToString(CultureInfo.InvariantCulture);
 
     #endregion Properties
 
@@ -36,11 +33,7 @@ public class ContentPlugin : TcPlugin, IContentPlugin
 
     #region Mandatory Methods
 
-    public virtual ContentFieldType GetSupportedField(
-        int fieldIndex,
-        out string fieldName,
-        out string units,
-        int maxLen) =>
+    public virtual ContentFieldType GetSupportedField(int fieldIndex, out string fieldName, out string units, int maxLen) =>
         throw new MethodNotSupportedException("GetSupportedField", true);
 
     public virtual GetValueResult GetValue(

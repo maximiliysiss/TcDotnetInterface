@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 
-namespace OY.TotalCommander.TcPluginInterface.Packer;
+namespace TcPluginInterface.Packer;
 
 public class PackerPlugin : TcPlugin, IPackerPlugin
 {
     #region Constructors
 
-    public PackerPlugin(StringDictionary pluginSettings)
-        : base(pluginSettings)
+    public PackerPlugin(StringDictionary pluginSettings) : base(pluginSettings)
     {
         BackgroundFlags = PackBackgroundFlags.None;
         Capabilities = PackerCapabilities.None;
@@ -17,13 +16,7 @@ public class PackerPlugin : TcPlugin, IPackerPlugin
 
     #endregion Constructors
 
-    public override void CreatePassword(int cryptoNumber, int flags)
-    {
-        if (Password == null)
-        {
-            Password = new PackerPassword(this, cryptoNumber, flags);
-        }
-    }
+    public override void CreatePassword(int cryptoNumber, int flags) => Password ??= new PackerPassword(this, cryptoNumber, flags);
 
     #region Properties
 
@@ -52,13 +45,8 @@ public class PackerPlugin : TcPlugin, IPackerPlugin
 
     #region Optional Methods
 
-    public virtual PackerResult PackFiles(
-        string packedFile,
-        string subPath,
-        string srcPath,
-        List<string> addList,
-        PackFilesFlags flags) =>
-        PackerResult.NotSupported;
+    public virtual PackerResult PackFiles(string packedFile, string subPath, string srcPath, List<string> addList, PackFilesFlags flags)
+        => PackerResult.NotSupported;
 
     public virtual PackerResult DeleteFiles(string packedFile, List<string> deleteList) => PackerResult.NotSupported;
 
@@ -68,14 +56,8 @@ public class PackerPlugin : TcPlugin, IPackerPlugin
 
     public virtual object StartMemPack(MemPackOptions options, string fileName) => null;
 
-    public virtual PackerResult PackToMem(
-        ref object memData,
-        byte[] bufIn,
-        ref int taken,
-        byte[] bufOut,
-        ref int written,
-        int seekBy) =>
-        PackerResult.NotSupported;
+    public virtual PackerResult PackToMem(ref object memData, byte[] bufIn, ref int taken, byte[] bufOut, ref int written, int seekBy)
+        => PackerResult.NotSupported;
 
     public virtual PackerResult DoneMemPack(object memData) => PackerResult.NotSupported;
 
@@ -87,8 +69,7 @@ public class PackerPlugin : TcPlugin, IPackerPlugin
 
     #region Callback Procedures
 
-    protected int ProcessDataProc(string fileName, int size) =>
-        OnTcPluginEvent(new PackerProcessEventArgs(fileName, size));
+    protected int ProcessDataProc(string fileName, int size) => OnTcPluginEvent(new PackerProcessEventArgs(fileName, size));
 
     protected int ChangeVolProc(string arcName, ChangeValueProcMode mode) =>
         OnTcPluginEvent(new PackerChangeVolEventArgs(arcName, (int)mode));

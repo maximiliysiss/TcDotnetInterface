@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace OY.TotalCommander.TcPluginInterface.Content;
+namespace TcPluginInterface.Content;
 
 // Used as parameter type for CompareFiles method
 [Serializable]

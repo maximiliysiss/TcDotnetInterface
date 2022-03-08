@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace OY.TotalCommander.TcPluginInterface.Packer;
+namespace TcPluginInterface.Packer;
 
 [CLSCompliant(false)]
 public interface IPackerPlugin
@@ -17,24 +17,13 @@ public interface IPackerPlugin
 
     #region Optional Methods
 
-    PackerResult PackFiles(
-        string packedFile,
-        string subPath,
-        string srcPath,
-        List<string> addList,
-        PackFilesFlags flags);
+    PackerResult PackFiles(string packedFile, string subPath, string srcPath, List<string> addList, PackFilesFlags flags);
 
     PackerResult DeleteFiles(string packedFile, List<string> deleteList);
     void ConfigurePacker(TcWindow parentWin);
     object StartMemPack(MemPackOptions options, string fileName);
 
-    PackerResult PackToMem(
-        ref object memData,
-        byte[] bufIn,
-        ref int taken,
-        byte[] bufOut,
-        ref int written,
-        int seekBy);
+    PackerResult PackToMem(ref object memData, byte[] bufIn, ref int taken, byte[] bufOut, ref int written, int seekBy);
 
     PackerResult DoneMemPack(object memData);
     bool CanYouHandleThisFile(string fileName);

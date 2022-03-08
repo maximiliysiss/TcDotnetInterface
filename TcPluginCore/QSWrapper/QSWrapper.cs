@@ -2,11 +2,11 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using OY.TotalCommander.TcPluginInterface;
-using OY.TotalCommander.TcPluginInterface.QuickSearch;
-using OY.TotalCommander.TcPluginTools;
+using TcPluginInterface;
+using TcPluginInterface.QuickSearch;
+using TcPluginTools;
 
-namespace OY.TotalCommander.QSWrapper;
+namespace QSWrapper;
 
 public class QuickSearchWrapper
 {
@@ -17,16 +17,15 @@ public class QuickSearchWrapper
     #region Properties
 
     private static QuickSearchPlugin Plugin =>
-        plugin ??
-        (plugin = (QuickSearchPlugin)TcPluginLoader.GetTcPlugin(pluginWrapperDll, PluginType.QuickSearch));
+        _plugin ??= (QuickSearchPlugin)TcPluginLoader.GetTcPlugin(_pluginWrapperDll, PluginType.QuickSearch);
 
     #endregion Properties
 
     #region Variables
 
-    private static QuickSearchPlugin plugin;
-    private static readonly string pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
-    private static string callSignature;
+    private static QuickSearchPlugin _plugin;
+    private static readonly string _pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
+    private static string _callSignature;
 
     #endregion Variables
 
@@ -42,7 +41,7 @@ public class QuickSearchWrapper
         var fileName = Marshal.PtrToStringUni(wcFileName);
 
         var result = false;
-        callSignature = string.Format("MatchFileW(\"{0}\",\"{1}\")", fileName, filter);
+        _callSignature = $"MatchFileW(\"{fileName}\",\"{filter}\")";
         try
         {
             result = Plugin.MatchFile(filter, fileName);
@@ -62,7 +61,7 @@ public class QuickSearchWrapper
     public static int MatchGetSetOptions(int status)
     {
         MatchOptions result;
-        callSignature = string.Format("MatchGetSetOptions(\"{0}\")", status);
+        _callSignature = $"MatchGetSetOptions(\"{status}\")";
         try
         {
             result = Plugin.MatchGetSetOptions((ExactNameMatch)status);
@@ -84,12 +83,12 @@ public class QuickSearchWrapper
 
     #region Tracing & Exceptions
 
-    public static void ProcessException(Exception ex) => TcPluginLoader.ProcessException(plugin, false, callSignature, ex);
+    public static void ProcessException(Exception ex) => TcPluginLoader.ProcessException(_plugin, false, _callSignature, ex);
 
     public static void TraceCall(TraceLevel level, string result)
     {
-        TcTrace.TraceCall(plugin, level, callSignature, result);
-        callSignature = null;
+        TcTrace.TraceCall(_plugin, level, _callSignature, result);
+        _callSignature = null;
     }
 
     #endregion Tracing & Exceptions

@@ -7,10 +7,10 @@ using System.Drawing;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using OY.TotalCommander.TcPluginInterface;
-using OY.TotalCommander.TcPluginTools;
+using TcPluginInterface;
+using TcPluginTools;
 
-namespace OY.TotalCommander.WrapperBuilder;
+namespace WrapperBuilder;
 
 internal sealed class Program
 {
@@ -22,77 +22,77 @@ internal sealed class Program
         {
             ParseArgs(args);
             AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += ReflectionOnlyAssemblyResolve;
-            WriteLine(string.Format("Wrapper Assembly '{0}'", wrapperAssemblyFile));
-            var exportedMethods = LoadExportedList(wrapperAssemblyFile);
-            WriteLine(string.Format("Plugin type : {0}", TcUtils.PluginNames[pluginType]));
+            WriteLine($"Wrapper Assembly '{_wrapperAssemblyFile}'");
+            var exportedMethods = LoadExportedList(_wrapperAssemblyFile);
+            WriteLine($"Plugin type : {TcUtils.PluginNames[_pluginType]}");
             if (exportedMethods.Count <= 0)
             {
                 throw new Exception(ErrorMsg6);
             }
 
-            WriteLine(string.Format("- {0} Methods to export", exportedMethods.Count));
+            WriteLine($"- {exportedMethods.Count} Methods to export");
             SetOutputNames();
             var excludedMethods = new List<string>();
-            if (!string.IsNullOrEmpty(pluginAssemblyFile))
+            if (!string.IsNullOrEmpty(_pluginAssemblyFile))
             {
                 excludedMethods = LoadExcludedList();
-                if (pluginType.Equals(PluginType.FileSystem))
+                if (_pluginType.Equals(PluginType.FileSystem))
                 {
-                    if (!string.IsNullOrEmpty(iconFileName) && File.Exists(iconFileName))
+                    if (!string.IsNullOrEmpty(_iconFileName) && File.Exists(_iconFileName))
                     {
-                        WriteLine("Plugin Icon added: " + iconFileName);
-                        iconFileName = iconFileName.Replace("\\", "\\\\");
+                        WriteLine($"Plugin Icon added: {_iconFileName}");
+                        _iconFileName = _iconFileName.Replace("\\", "\\\\");
                     }
-                    else if (iconFromPluginAssembly)
+                    else if (_iconFromPluginAssembly)
                     {
-                        iconFileName = GetTmpIconFileName(pluginAssemblyFile);
+                        _iconFileName = GetTmpIconFileName(_pluginAssemblyFile);
                     }
                 }
             }
 
             var sourcePath = Disassemble();
-            WriteLine(string.Format("Disassembled to '{0}'", sourcePath));
-            var sourceOutPath = workDir + @"\output.il";
+            WriteLine($"Disassembled to '{sourcePath}'");
+            var sourceOutPath = $@"{_workDir}\output.il";
             ProcessSource(sourcePath, sourceOutPath, exportedMethods, excludedMethods);
-            WriteLine(string.Format("Processed to '{0}'", sourceOutPath));
+            WriteLine($"Processed to '{sourceOutPath}'");
 
-            if (x32Flag)
+            if (_x32Flag)
             {
                 Assemble(false);
             }
 
-            if (x64Flag)
+            if (_x64Flag)
             {
                 Assemble(true);
             }
 
-            if (!outputWrapperFolder.Equals(Path.GetDirectoryName(pluginAssemblyFile)))
+            if (!_outputWrapperFolder.Equals(Path.GetDirectoryName(_pluginAssemblyFile)))
             {
                 File.Copy(
-                    pluginAssemblyFile,
-                    Path.Combine(outputWrapperFolder, Path.GetFileName(pluginAssemblyFile)),
+                    _pluginAssemblyFile,
+                    Path.Combine(_outputWrapperFolder, Path.GetFileName(_pluginAssemblyFile)),
                     true);
             }
 
-            if (createInstZip)
+            if (_createInstZip)
             {
                 CreateInstallationZip();
             }
 
-            if (clearWorkDir)
+            if (_clearWorkDir)
             {
-                Directory.Delete(workDir, true);
+                Directory.Delete(_workDir, true);
             }
 
-            if (pause)
+            if (_pause)
             {
                 Console.Read();
             }
         }
         catch (Exception ex)
         {
-            WriteLine("ERROR: " + ex.Message, false);
-            if (pause)
+            WriteLine($"ERROR: {ex.Message}", false);
+            if (_pause)
             {
                 Console.Read();
             }
@@ -106,7 +106,7 @@ internal sealed class Program
     #region Constants
 
     private const string PluginInterfacePropertyName = "Plugin";
-    private static readonly NameValueCollection appSettings = ConfigurationManager.AppSettings;
+    private static readonly NameValueCollection _appSettings = ConfigurationManager.AppSettings;
 
     // Error Messages
     private const string ErrorMsg0 =
@@ -132,7 +132,7 @@ internal sealed class Program
     private const string WarningMsg2 = "File '{0}' - Resource Compiler ERROR.";
     private const string WarningMsg3 = "    WARNING!!! Type '{0}' - mandatory methods not implemented : {1}";
 
-    private static readonly Dictionary<PluginType, string> pluginExtensions =
+    private static readonly Dictionary<PluginType, string> _pluginExtensions =
         new()
         {
             { PluginType.Content, "wdx" },
@@ -142,7 +142,7 @@ internal sealed class Program
             { PluginType.QuickSearch, "dll" }
         };
 
-    private static readonly Dictionary<PluginType, string> pluginMethodPrefixes =
+    private static readonly Dictionary<PluginType, string> _pluginMethodPrefixes =
         new()
         {
             { PluginType.Content, "Content" },
@@ -154,7 +154,7 @@ internal sealed class Program
 
     // Mandatory plugin methods, parts of .NET plugin interface.
     // They must be implemented in plugin assembly.
-    private static readonly Dictionary<PluginType, string[]> pluginMandatoryMethods =
+    private static readonly Dictionary<PluginType, string[]> _pluginMandatoryMethods =
         new()
         {
             {
@@ -201,9 +201,9 @@ internal sealed class Program
         };
 
     // Optional plugin methods - can be omitted in plugin assembly.
-    // We have to exclude their calls from wrapper because of TC plugin requirements: 
+    // We have to exclude their calls from wrapper because of TC plugin requirements:
     // "(must NOT be implemented if unsupported!)" - from TC plugin help.)
-    private static readonly Dictionary<PluginType, string[]> pluginOptionalMethods =
+    private static readonly Dictionary<PluginType, string[]> _pluginOptionalMethods =
         new()
         {
             {
@@ -277,7 +277,7 @@ internal sealed class Program
     //   1. TC plugin methods implemented in plugin wrapper only and are not parts of .NET plugin interface, or
     //   2. Methods implemented in parent plugin class and can be omitted in plugin assembly.
     // We DON'T have to exclude them from plugin wrapper.
-    private static readonly Dictionary<PluginType, string[]> pluginOtherMethods =
+    private static readonly Dictionary<PluginType, string[]> _pluginOtherMethods =
         new()
         {
             {
@@ -328,7 +328,7 @@ internal sealed class Program
             }
         };
 
-    private static readonly string[] resourceTemplate =
+    private static readonly string[] _resourceTemplate =
     {
         "1 VERSIONINFO",
         "FILEVERSION {FileVersion}",
@@ -352,7 +352,7 @@ internal sealed class Program
         "ICON_1 ICON \"{IconFile}\""
     };
 
-    private static readonly string[] configTemplate =
+    private static readonly string[] _configTemplate =
     {
         "<?xml version=\"1.0\" encoding=\"utf-8\" ?>",
         "<configuration>",
@@ -369,7 +369,7 @@ internal sealed class Program
 
     private const string DefaultDescription = "...Put your description here...";
 
-    private static readonly string[] pluginstTemplate =
+    private static readonly string[] _pluginsTemplate =
     {
         "[plugininstall]",
         "description={Description}",
@@ -379,7 +379,7 @@ internal sealed class Program
         "defaultextension=???"
     };
 
-    private static readonly string[] usageInfo =
+    private static readonly string[] _usageInfo =
     {
         "Builds wrapper DLL(s) for Total Commander plugin written in .NET",
         "",
@@ -440,36 +440,35 @@ internal sealed class Program
 
     #region Variables
 
-    private static readonly string AppFolder =
+    private static readonly string _appFolder =
         Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
 
-    private static readonly string dllExportAttributeTypeName = typeof(DllExportAttribute).FullName;
-    private static readonly List<string> ilasmArgs = new();
-    private static readonly string workDir = GetWorkingDirectory();
+    private static readonly string _dllExportAttributeTypeName = typeof(DllExportAttribute).FullName;
+    private static readonly List<string> _ilasmArgs = new();
+    private static readonly string _workDir = GetWorkingDirectory();
 
-    private static readonly bool clearWorkDir = false;
+    private static readonly bool _clearWorkDir = false;
 
-    private static readonly bool createConfiguration = true;
+    private static readonly bool _createConfiguration = true;
 
-    //static bool createPluginst = false;
-    private static readonly bool createInstZip = true;
+    private static readonly bool _createInstZip = true;
 
-    private static string assemblerPath;
-    private static string contentAssemblyFile;
-    private static string disassemblerPath;
-    private static string rcPath;
-    private static string iconFileName;
-    private static bool iconFromPluginAssembly;
-    private static string outputWrapperFolder;
-    private static string outputWrapperName;
-    private static string pluginAssemblyFile;
-    private static PluginType pluginType = PluginType.Unknown;
-    private static bool verbose;
-    private static string wrapperAssemblyFile;
-    private static string wrapperAssemblyVersion;
-    private static bool x32Flag = true;
-    private static bool x64Flag = true;
-    private static bool pause;
+    private static string _assemblerPath;
+    private static string _contentAssemblyFile;
+    private static string _disassemblerPath;
+    private static string _rcPath;
+    private static string _iconFileName;
+    private static bool _iconFromPluginAssembly;
+    private static string _outputWrapperFolder;
+    private static string _outputWrapperName;
+    private static string _pluginAssemblyFile;
+    private static PluginType _pluginType = PluginType.Unknown;
+    private static bool _verbose;
+    private static string _wrapperAssemblyFile;
+    private static string _wrapperAssemblyVersion;
+    private static bool _x32Flag = true;
+    private static bool _x64Flag = true;
+    private static bool _pause;
 
     #endregion Variables
 
@@ -477,13 +476,13 @@ internal sealed class Program
 
     private static string Assemble(bool x64)
     {
-        var outputFileName = outputWrapperName;
-        var outputWrapperExt = "." + pluginExtensions[pluginType];
-        var outPath = string.Format(@"{0}\{1}", workDir, Path.GetFileName(wrapperAssemblyFile));
-        var resourcePath = string.Format(@"{0}\{1}", workDir, "input.res");
+        var outputFileName = _outputWrapperName;
+        var outputWrapperExt = $".{_pluginExtensions[_pluginType]}";
+        var outPath = $@"{_workDir}\{Path.GetFileName(_wrapperAssemblyFile)}";
+        var resourcePath = $@"{_workDir}\{"input.res"}";
         var args = new StringBuilder();
-        args.AppendFormat(@"""{0}\output.il"" /out:""{1}""", workDir, outPath);
-        if (Path.GetExtension(wrapperAssemblyFile) == ".dll")
+        args.AppendFormat(@"""{0}\output.il"" /out:""{1}""", _workDir, outPath);
+        if (Path.GetExtension(_wrapperAssemblyFile) == ".dll")
         {
             args.Append(" /dll");
         }
@@ -495,9 +494,9 @@ internal sealed class Program
 
         if (x64)
         {
-            ilasmArgs.Add("/x64");
-            ilasmArgs.Add("/PE64");
-            if (pluginType == PluginType.QuickSearch)
+            _ilasmArgs.Add("/x64");
+            _ilasmArgs.Add("/PE64");
+            if (_pluginType == PluginType.QuickSearch)
             {
                 outputFileName += "64";
             }
@@ -513,13 +512,13 @@ internal sealed class Program
             WriteLine("\n32-bit plugin wrapper\n=====================");
         }
 
-        if (ilasmArgs.Count > 0)
+        if (_ilasmArgs.Count > 0)
         {
-            args.Append(" ").Append(string.Join(" ", ilasmArgs.ToArray()));
+            args.Append(" ").Append(string.Join(" ", _ilasmArgs.ToArray()));
         }
 
         var startInfo =
-            new ProcessStartInfo(assemblerPath, args.ToString())
+            new ProcessStartInfo(_assemblerPath, args.ToString())
             {
                 WindowStyle = ProcessWindowStyle.Hidden
             };
@@ -530,13 +529,13 @@ internal sealed class Program
             throw new Exception(ErrorMsg8);
         }
 
-        WriteLine(string.Format("  Assembled to '{0}'", outPath));
+        WriteLine($"  Assembled to '{outPath}'");
         var newPath = //Path.Combine(outputWrapperFolder, outputWrapperName + outputWrapperExt);
             outputFileName + outputWrapperExt;
         File.Delete(newPath);
         File.Copy(outPath, newPath, true);
-        WriteLine(string.Format("  Wrapper assembly moved to '{0}'", newPath));
-        if (createConfiguration)
+        WriteLine($"  Wrapper assembly moved to '{newPath}'");
+        if (_createConfiguration)
         {
             CreateConfigFile(newPath);
         }
@@ -546,10 +545,10 @@ internal sealed class Program
 
     private static string Disassemble()
     {
-        var sourcePath = string.Format(@"{0}\input.il", workDir);
-        var args = string.Format(@"""{0}"" /out:""{1}""", wrapperAssemblyFile, sourcePath);
+        var sourcePath = $@"{_workDir}\input.il";
+        var args = $@"""{_wrapperAssemblyFile}"" /out:""{sourcePath}""";
         var startInfo =
-            new ProcessStartInfo(disassemblerPath, args)
+            new ProcessStartInfo(_disassemblerPath, args)
             {
                 WindowStyle = ProcessWindowStyle.Hidden
             };
@@ -557,20 +556,20 @@ internal sealed class Program
         process.WaitForExit();
         if (process.ExitCode != 0)
         {
-            throw new Exception(string.Format(ErrorMsg9, wrapperAssemblyFile));
+            throw new Exception(string.Format(ErrorMsg9, _wrapperAssemblyFile));
         }
 
         try
         {
-            var rcFile = rcPath ?? Path.Combine(Path.GetDirectoryName(disassemblerPath), "rc.exe");
+            var rcFile = _rcPath ?? Path.Combine(Path.GetDirectoryName(_disassemblerPath), "rc.exe");
             if (string.IsNullOrEmpty(rcFile) || !File.Exists(rcFile))
             {
                 throw new Exception(WarningMsg1);
             }
 
-            var resFileName = workDir + "\\input.rc";
+            var resFileName = $"{_workDir}\\input.rc";
             FillResourceFile(resFileName);
-            args = "/v " + resFileName;
+            args = $"/v {resFileName}";
             startInfo =
                 new ProcessStartInfo(rcFile, args)
                 {
@@ -585,7 +584,7 @@ internal sealed class Program
         }
         catch (Exception ex)
         {
-            WriteLine("WARNING: " + ex.Message, false);
+            WriteLine($"WARNING: {ex.Message}", false);
         }
 
         return sourcePath;
@@ -595,7 +594,7 @@ internal sealed class Program
     {
         string fileVersion = null;
         string productVersion = null;
-        var version = FileVersionInfo.GetVersionInfo(pluginAssemblyFile); // wrapperAssemblyFile);
+        var version = FileVersionInfo.GetVersionInfo(_pluginAssemblyFile); // wrapperAssemblyFile);
         var versionInfo = new StringBuilder(500);
         if (!string.IsNullOrEmpty(version.Comments))
         {
@@ -651,10 +650,10 @@ internal sealed class Program
             productVersion = version.ProductVersion.Replace('.', ',');
         }
 
-        versionInfo.AppendFormat("    VALUE \"Assembly Version\", \"{0}\"\n", wrapperAssemblyVersion);
+        versionInfo.AppendFormat("    VALUE \"Assembly Version\", \"{0}\"\n", _wrapperAssemblyVersion);
         using (var output = new StreamWriter(resFileName, false, Encoding.Default))
         {
-            foreach (var str in resourceTemplate)
+            foreach (var str in _resourceTemplate)
             {
                 var outputStr = str
                     .Replace("{FileVersion}", fileVersion)
@@ -662,13 +661,13 @@ internal sealed class Program
                     .Replace("{Values}", versionInfo.ToString());
                 if (str.Contains("{IconFile}"))
                 {
-                    if (string.IsNullOrEmpty(iconFileName))
+                    if (string.IsNullOrEmpty(_iconFileName))
                     {
                         continue;
                     }
 
                     // Add icon to resource file for wrapper
-                    outputStr = outputStr.Replace("{IconFile}", iconFileName);
+                    outputStr = outputStr.Replace("{IconFile}", _iconFileName);
                 }
 
                 output.WriteLine(outputStr);
@@ -678,7 +677,7 @@ internal sealed class Program
 
     private static void CreateConfigFile(string wrapperFileName)
     {
-        var configFileName = wrapperFileName + ".config";
+        var configFileName = $"{wrapperFileName}.config";
         if (File.Exists(configFileName))
         {
             return;
@@ -686,16 +685,16 @@ internal sealed class Program
 
         using (var output = new StreamWriter(configFileName, false, Encoding.Default))
         {
-            foreach (var str in configTemplate)
+            foreach (var str in _configTemplate)
             {
-                if (str.Contains("\"writeStatusInfo\"") && !pluginType.Equals(PluginType.FileSystem))
+                if (str.Contains("\"writeStatusInfo\"") && !_pluginType.Equals(PluginType.FileSystem))
                 {
                     continue;
                 }
 
                 output.WriteLine(
                     str
-                        .Replace("{PluginAssembly}", Path.GetFileName(pluginAssemblyFile)));
+                        .Replace("{PluginAssembly}", Path.GetFileName(_pluginAssemblyFile)));
             }
         }
     }
@@ -707,31 +706,31 @@ internal sealed class Program
             return;
         }
 
-        var version = FileVersionInfo.GetVersionInfo(pluginAssemblyFile);
+        var version = FileVersionInfo.GetVersionInfo(_pluginAssemblyFile);
         var description = version.Comments ?? DefaultDescription;
-        var wrapperName = Path.GetFileNameWithoutExtension(outputWrapperName);
+        var wrapperName = Path.GetFileNameWithoutExtension(_outputWrapperName);
         using (var output = new StreamWriter(iniFileName, false, Encoding.Default))
         {
-            foreach (var str in pluginstTemplate)
+            foreach (var str in _pluginsTemplate)
             {
-                if (str.StartsWith("defaultextension") && !pluginType.Equals(PluginType.Packer))
+                if (str.StartsWith("defaultextension") && !_pluginType.Equals(PluginType.Packer))
                 {
                     continue;
                 }
 
                 output.WriteLine(
                     str
-                        .Replace("{PluginType}", pluginExtensions[pluginType])
-                        .Replace("{PluginFile}", wrapperName + "." + pluginExtensions[pluginType])
+                        .Replace("{PluginType}", _pluginExtensions[_pluginType])
+                        .Replace("{PluginFile}", $"{wrapperName}.{_pluginExtensions[_pluginType]}")
                         .Replace("{Description}", description)
-                        .Replace("{DefaultDir}", "dotNet_" + wrapperName));
+                        .Replace("{DefaultDir}", $"dotNet_{wrapperName}"));
             }
         }
     }
 
     private static void CreateInstallationZip()
     {
-        if (pluginType == PluginType.QuickSearch)
+        if (_pluginType == PluginType.QuickSearch)
         {
             return;
         }
@@ -739,9 +738,9 @@ internal sealed class Program
         WriteLine("\nInstallation archive\n====================");
 
         string zipArchiver = null;
-        if (appSettings != null)
+        if (_appSettings != null)
         {
-            zipArchiver = appSettings["zipArchiver"];
+            zipArchiver = _appSettings["zipArchiver"];
         }
 
         if (string.IsNullOrEmpty(zipArchiver))
@@ -756,34 +755,34 @@ internal sealed class Program
 //                throw new Exception(String.Format(ErrorMsg12, zipArchiver));
         }
 
-        var iniFile = Path.Combine(outputWrapperFolder, "pluginst.inf");
+        var iniFile = Path.Combine(_outputWrapperFolder, "pluginst.inf");
         CreatePluginstFile(iniFile); //   ???
         if (File.Exists(iniFile))
         {
-            var outFile = outputWrapperName;
-            var wrapperFile = outFile + "." + pluginExtensions[pluginType];
-            var args = "-j -q " + outFile + ".zip";
-            if (x32Flag)
+            var outFile = _outputWrapperName;
+            var wrapperFile = $"{outFile}.{_pluginExtensions[_pluginType]}";
+            var args = $"-j -q {outFile}.zip";
+            if (_x32Flag)
             {
-                args += " " + wrapperFile;
-                if (File.Exists(wrapperFile + ".config"))
+                args += $" {wrapperFile}";
+                if (File.Exists($"{wrapperFile}.config"))
                 {
-                    args += " " + wrapperFile + ".config";
+                    args += $" {wrapperFile}.config";
                 }
             }
 
-            if (x64Flag)
+            if (_x64Flag)
             {
                 wrapperFile += "64";
-                args += " " + wrapperFile;
-                if (File.Exists(wrapperFile + ".config"))
+                args += $" {wrapperFile}";
+                if (File.Exists($"{wrapperFile}.config"))
                 {
-                    args += " " + wrapperFile + ".config";
+                    args += $" {wrapperFile}.config";
                 }
             }
 
-            args += " " + pluginAssemblyFile;
-            args += " " + iniFile;
+            args += $" {_pluginAssemblyFile}";
+            args += $" {iniFile}";
 
             var startInfo = new ProcessStartInfo(zipArchiver, args)
             {
@@ -797,7 +796,7 @@ internal sealed class Program
             }
             else
             {
-                WriteLine(string.Format("  Archive created: '{0}.zip'", outFile));
+                WriteLine($"  Archive created: '{outFile}.zip'");
                 File.Delete(iniFile);
             }
         }
@@ -814,7 +813,7 @@ internal sealed class Program
                 foreach (var attr in CustomAttributeData.GetCustomAttributes(method))
                 {
                     if (attr.Constructor.DeclaringType != null
-                        && attr.Constructor.DeclaringType.FullName.Equals(dllExportAttributeTypeName))
+                        && attr.Constructor.DeclaringType.FullName.Equals(_dllExportAttributeTypeName))
                     {
                         if (attr.NamedArguments != null)
                         {
@@ -845,7 +844,7 @@ internal sealed class Program
             var icon = Icon.ExtractAssociatedIcon(pluginAssembly);
             if (icon != null)
             {
-                using (Stream s = new FileStream(Path.Combine(workDir, iconFile), FileMode.Create))
+                using (Stream s = new FileStream(Path.Combine(_workDir, iconFile), FileMode.Create))
                 {
                     icon.Save(s);
                 }
@@ -855,7 +854,7 @@ internal sealed class Program
         }
         catch (Exception ex)
         {
-            WriteLine("ICON EXTRACT ERROR: " + ex.Message, false);
+            WriteLine($"ICON EXTRACT ERROR: {ex.Message}", false);
             iconFile = null;
         }
 
@@ -879,28 +878,28 @@ internal sealed class Program
         var list = new List<string>();
         var domain = AppDomain.CreateDomain(Guid.NewGuid().ToString());
         domain.ReflectionOnlyAssemblyResolve += ReflectionOnlyAssemblyResolve;
-        domain.SetData("pluginDll", pluginAssemblyFile);
-        domain.SetData("pluginType", pluginType);
+        domain.SetData("pluginDll", _pluginAssemblyFile);
+        domain.SetData("pluginType", _pluginType);
         WriteLine("Excluded methods:");
-        WriteLine(string.Format("  Plugin Assembly '{0}'", pluginAssemblyFile));
+        WriteLine($"  Plugin Assembly '{_pluginAssemblyFile}'");
         domain.DoCallBack(LoadExcludedMethods);
 
         var pList = (List<string>)domain.GetData("methods");
         foreach (var method in pList)
         {
-            WriteLine("   - " + method);
+            WriteLine($"   - {method}");
         }
 
         list.AddRange(pList);
-        if (pluginType.Equals(PluginType.FileSystem))
+        if (_pluginType.Equals(PluginType.FileSystem))
         {
             pList.Clear();
             WriteLine(
                 string.Format(
-                    (string.IsNullOrEmpty(contentAssemblyFile) ? "  No Content Assembly, try " : "  Content Assembly ") + "'{0}'",
-                    contentAssemblyFile ?? pluginAssemblyFile));
+                    (string.IsNullOrEmpty(_contentAssemblyFile) ? "  No Content Assembly, try " : "  Content Assembly ") + "'{0}'",
+                    _contentAssemblyFile ?? _pluginAssemblyFile));
             // System plugins can contain some methods of content plugin
-            domain.SetData("pluginDll", contentAssemblyFile ?? pluginAssemblyFile);
+            domain.SetData("pluginDll", _contentAssemblyFile ?? _pluginAssemblyFile);
             domain.SetData("pluginType", PluginType.Content);
             try
             {
@@ -908,7 +907,7 @@ internal sealed class Program
                 pList = (List<string>)domain.GetData("methods");
                 foreach (var method in pList)
                 {
-                    WriteLine("   - " + method);
+                    WriteLine($"   - {method}");
                 }
 
                 list.AddRange(pList);
@@ -916,12 +915,12 @@ internal sealed class Program
             catch (PluginNotImplementedException)
             {
                 WriteLine("  -- Content interface is NOT implemented, exclude all Content methods:");
-                pList.AddRange(pluginMandatoryMethods[PluginType.Content]);
-                pList.AddRange(pluginOptionalMethods[PluginType.Content]);
-                pList.AddRange(pluginOtherMethods[PluginType.Content]);
+                pList.AddRange(_pluginMandatoryMethods[PluginType.Content]);
+                pList.AddRange(_pluginOptionalMethods[PluginType.Content]);
+                pList.AddRange(_pluginOtherMethods[PluginType.Content]);
                 foreach (var method in pList)
                 {
-                    WriteLine("   - " + method);
+                    WriteLine($"   - {method}");
                 }
 
                 list.AddRange(pList);
@@ -935,8 +934,8 @@ internal sealed class Program
     private static void LoadExcludedMethods()
     {
         var assemblyPath = (string)AppDomain.CurrentDomain.GetData("pluginDll");
-        pluginType = (PluginType)AppDomain.CurrentDomain.GetData("pluginType");
-        var methods = GetExcludedMethods(assemblyPath, pluginType);
+        _pluginType = (PluginType)AppDomain.CurrentDomain.GetData("pluginType");
+        var methods = GetExcludedMethods(assemblyPath, _pluginType);
         AppDomain.CurrentDomain.SetData("methods", methods);
     }
 
@@ -951,7 +950,7 @@ internal sealed class Program
 
         var assemblyOk = false;
 
-        var exclMethods = new List<string>(pluginOptionalMethods[pType]);
+        var exclMethods = new List<string>(_pluginOptionalMethods[pType]);
         var assembly = TcPluginLoader.AssemblyReflectionOnlyLoadFrom(assemblyPath);
         foreach (var type in assembly.GetExportedTypes())
         {
@@ -966,11 +965,11 @@ internal sealed class Program
                 }
 
                 // Check if all mandatory methods are implemented in the type
-                foreach (var method in pluginMandatoryMethods[pType])
+                foreach (var method in _pluginMandatoryMethods[pType])
                 {
                     if (!typeMethods.Contains(method))
                     {
-                        methodsMissed += method + ",";
+                        methodsMissed += $"{method},";
                     }
                 }
 
@@ -978,7 +977,7 @@ internal sealed class Program
                 {
                     // all mandatory methods are implemented
                     assemblyOk = true;
-                    foreach (var method in pluginOptionalMethods[pType])
+                    foreach (var method in _pluginOptionalMethods[pType])
                     {
                         if (typeMethods.Contains(method))
                         {
@@ -1025,8 +1024,8 @@ internal sealed class Program
         domain.SetData("assemblyPath", assemblyPath);
         domain.DoCallBack(LoadExportedMethods);
         var list = (List<string>)domain.GetData("methods");
-        wrapperAssemblyVersion = (string)domain.GetData("assemblyVersion");
-        pluginType = (PluginType)domain.GetData("pluginType");
+        _wrapperAssemblyVersion = (string)domain.GetData("assemblyVersion");
+        _pluginType = (PluginType)domain.GetData("pluginType");
         AppDomain.Unload(domain);
         return list;
     }
@@ -1053,7 +1052,7 @@ internal sealed class Program
                     }
                     else
                     {
-                        throw new Exception(string.Format(ErrorMsg4, assemblyFile, pluginExtensions[pType], pluginExtensions[plugType]));
+                        throw new Exception(string.Format(ErrorMsg4, assemblyFile, _pluginExtensions[pType], _pluginExtensions[plugType]));
                     }
                 }
             }
@@ -1087,242 +1086,177 @@ internal sealed class Program
     {
         //TODO : parameter to create simple config file
         var showHelp = args.Length == 0;
-        for (var i = 0; i < args.Length; i++)
+        foreach (var arg in args)
         {
-            var arg = args[i];
             if (arg.Equals("/?"))
             {
                 showHelp = true;
                 break;
             }
 
-            if (arg.Equals("/wcx"))
+            switch (arg)
             {
-                if (string.IsNullOrEmpty(wrapperAssemblyFile))
-                {
-                    wrapperAssemblyFile = Path.Combine(AppFolder, "WcxWrapper.dll");
-                }
-                else
-                {
+                case "/wcx" when string.IsNullOrEmpty(_wrapperAssemblyFile):
+                    _wrapperAssemblyFile = Path.Combine(_appFolder, "WcxWrapper.dll");
+                    break;
+                case "/wcx":
                     throw new Exception(ErrorMsg0);
-                }
-            }
-            else if (arg.Equals("/wdx"))
-            {
-                if (string.IsNullOrEmpty(wrapperAssemblyFile))
-                {
-                    wrapperAssemblyFile = Path.Combine(AppFolder, "WdxWrapper.dll");
-                }
-                else
-                {
+                case "/wdx" when string.IsNullOrEmpty(_wrapperAssemblyFile):
+                    _wrapperAssemblyFile = Path.Combine(_appFolder, "WdxWrapper.dll");
+                    break;
+                case "/wdx":
                     throw new Exception(ErrorMsg0);
-                }
-            }
-            else if (arg.Equals("/wfx"))
-            {
-                if (string.IsNullOrEmpty(wrapperAssemblyFile))
-                {
-                    wrapperAssemblyFile = Path.Combine(AppFolder, "WfxWrapper.dll");
-                }
-                else
-                {
+                case "/wfx" when string.IsNullOrEmpty(_wrapperAssemblyFile):
+                    _wrapperAssemblyFile = Path.Combine(_appFolder, "WfxWrapper.dll");
+                    break;
+                case "/wfx":
                     throw new Exception(ErrorMsg0);
-                }
-            }
-            else if (arg.Equals("/wlx"))
-            {
-                if (string.IsNullOrEmpty(wrapperAssemblyFile))
-                {
-                    wrapperAssemblyFile = Path.Combine(AppFolder, "WlxWrapper.dll");
-                }
-                else
-                {
+                case "/wlx" when string.IsNullOrEmpty(_wrapperAssemblyFile):
+                    _wrapperAssemblyFile = Path.Combine(_appFolder, "WlxWrapper.dll");
+                    break;
+                case "/wlx":
                     throw new Exception(ErrorMsg0);
-                }
-            }
-            else if (arg.Equals("/qs"))
-            {
-                if (string.IsNullOrEmpty(wrapperAssemblyFile))
-                {
-                    wrapperAssemblyFile = Path.Combine(AppFolder, "QSWrapper.dll");
-                }
-                else
-                {
+                case "/qs" when string.IsNullOrEmpty(_wrapperAssemblyFile):
+                    _wrapperAssemblyFile = Path.Combine(_appFolder, "QSWrapper.dll");
+                    break;
+                case "/qs":
                     throw new Exception(ErrorMsg0);
-                }
-            }
-            else if (arg.StartsWith("/w="))
-            {
-                if (string.IsNullOrEmpty(wrapperAssemblyFile))
-                {
-                    wrapperAssemblyFile = arg.Substring(3);
-                }
-                else
-                {
-                    throw new Exception(ErrorMsg0);
-                }
-            }
-            else if (arg.StartsWith("/p="))
-            {
-                pluginAssemblyFile = arg.Substring(3);
-            }
-            else if (arg.StartsWith("/c="))
-            {
-                contentAssemblyFile = arg.Substring(3);
-            }
-            else if (arg.StartsWith("/o="))
-            {
-                outputWrapperName = arg.Substring(3);
-            }
-            else if (arg.StartsWith("/a="))
-            {
-                assemblerPath = arg.Substring(3);
-            }
-            else if (arg.StartsWith("/d="))
-            {
-                disassemblerPath = arg.Substring(3);
-            }
-            else if (arg.StartsWith("/r="))
-            {
-                rcPath = arg.Substring(3);
-            }
-            else if (arg.StartsWith("/i="))
-            {
-                iconFileName = arg.Substring(3);
-            }
-            else if (arg.Equals("/ipa"))
-            {
-                iconFromPluginAssembly = true;
-            }
-            else if (arg.Equals("/v"))
-            {
-                verbose = true;
-            }
-            else if (arg.Equals("/release"))
-            {
-                ilasmArgs.Add("/optimize");
-            }
-            else if (arg.Equals("/x32"))
-            {
-                x64Flag = false;
-            }
-            else if (arg.Equals("/x64"))
-            {
-                x32Flag = false;
-            }
-            else if (arg.Equals("/pause"))
-            {
-                pause = true;
+                default:
+                    {
+                        if (arg.StartsWith("/w="))
+                        {
+                            if (string.IsNullOrEmpty(_wrapperAssemblyFile))
+                            {
+                                _wrapperAssemblyFile = arg.Substring(3);
+                            }
+                            else
+                            {
+                                throw new Exception(ErrorMsg0);
+                            }
+                        }
+                        else if (arg.StartsWith("/p="))
+                        {
+                            _pluginAssemblyFile = arg.Substring(3);
+                        }
+                        else if (arg.StartsWith("/c="))
+                        {
+                            _contentAssemblyFile = arg.Substring(3);
+                        }
+                        else if (arg.StartsWith("/o="))
+                        {
+                            _outputWrapperName = arg.Substring(3);
+                        }
+                        else if (arg.StartsWith("/a="))
+                        {
+                            _assemblerPath = arg.Substring(3);
+                        }
+                        else if (arg.StartsWith("/d="))
+                        {
+                            _disassemblerPath = arg.Substring(3);
+                        }
+                        else if (arg.StartsWith("/r="))
+                        {
+                            _rcPath = arg.Substring(3);
+                        }
+                        else if (arg.StartsWith("/i="))
+                        {
+                            _iconFileName = arg.Substring(3);
+                        }
+                        else if (arg.Equals("/ipa"))
+                        {
+                            _iconFromPluginAssembly = true;
+                        }
+                        else if (arg.Equals("/v"))
+                        {
+                            _verbose = true;
+                        }
+                        else if (arg.Equals("/release"))
+                        {
+                            _ilasmArgs.Add("/optimize");
+                        }
+                        else if (arg.Equals("/x32"))
+                        {
+                            _x64Flag = false;
+                        }
+                        else if (arg.Equals("/x64"))
+                        {
+                            _x32Flag = false;
+                        }
+                        else if (arg.Equals("/pause"))
+                        {
+                            _pause = true;
+                        }
+
+                        break;
+                    }
             }
         }
 
         if (showHelp)
         {
-            foreach (var str in usageInfo)
-            {
+            foreach (var str in _usageInfo)
                 Console.WriteLine(str);
-            }
 
             Environment.Exit(1);
         }
 
-        if (string.IsNullOrEmpty(wrapperAssemblyFile) || !File.Exists(wrapperAssemblyFile))
-        {
-            throw new Exception(string.Format(ErrorMsg1, wrapperAssemblyFile));
-        }
+        if (string.IsNullOrEmpty(_wrapperAssemblyFile) || !File.Exists(_wrapperAssemblyFile))
+            throw new Exception(string.Format(ErrorMsg1, _wrapperAssemblyFile));
 
-        if (string.IsNullOrEmpty(pluginAssemblyFile) || !File.Exists(pluginAssemblyFile))
-        {
-            throw new Exception(string.Format(ErrorMsg11, pluginAssemblyFile));
-        }
+        if (string.IsNullOrEmpty(_pluginAssemblyFile) || !File.Exists(_pluginAssemblyFile))
+            throw new Exception(string.Format(ErrorMsg11, _pluginAssemblyFile));
 
-        if (string.IsNullOrEmpty(assemblerPath))
-        {
-            if (appSettings != null)
-            {
-                assemblerPath = appSettings["assemblerPath"];
-            }
-        }
+        if (string.IsNullOrEmpty(_assemblerPath) && _appSettings != null)
+            _assemblerPath = _appSettings["assemblerPath"];
 
-        if (string.IsNullOrEmpty(disassemblerPath))
-        {
-            if (appSettings != null)
-            {
-                disassemblerPath = appSettings["disassemblerPath"];
-            }
-        }
+        if (string.IsNullOrEmpty(_disassemblerPath) && _appSettings != null)
+            _disassemblerPath = _appSettings["disassemblerPath"];
 
-        if (string.IsNullOrEmpty(rcPath))
-        {
-            if (appSettings != null)
-            {
-                rcPath = appSettings["rcPath"];
-            }
-        }
+        if (string.IsNullOrEmpty(_rcPath) && _appSettings != null)
+            _rcPath = _appSettings["rcPath"];
 
-        if (string.IsNullOrEmpty(assemblerPath) || !File.Exists(assemblerPath))
-        {
+        if (string.IsNullOrEmpty(_assemblerPath) || !File.Exists(_assemblerPath))
             throw new Exception(ErrorMsg2);
-        }
 
-        if (string.IsNullOrEmpty(disassemblerPath) || !File.Exists(disassemblerPath))
-        {
+        if (string.IsNullOrEmpty(_disassemblerPath) || !File.Exists(_disassemblerPath))
             throw new Exception(ErrorMsg3);
-        }
 
-        if (!x32Flag && !x64Flag)
-        {
+        if (!_x32Flag && !_x64Flag)
             throw new Exception(ErrorMsg10);
-        }
 
-        WriteLine(string.Format("IL Disassembler: '{0}'", disassemblerPath));
-        WriteLine(string.Format("IL Assembler   : '{0}'", assemblerPath));
+        WriteLine($"IL Disassembler: '{_disassemblerPath}'");
+        WriteLine($"IL Assembler   : '{_assemblerPath}'");
     }
 
     private static void SetOutputNames()
     {
-        if (string.IsNullOrEmpty(outputWrapperName))
+        if (string.IsNullOrEmpty(_outputWrapperName))
         {
-            outputWrapperFolder = Path.GetDirectoryName(pluginAssemblyFile);
-            if (pluginType == PluginType.QuickSearch)
-            {
-                outputWrapperName = "tcmatch";
-            }
-            else
-            {
-                outputWrapperName = Path.GetFileNameWithoutExtension(pluginAssemblyFile);
-            }
+            _outputWrapperFolder = Path.GetDirectoryName(_pluginAssemblyFile);
+            _outputWrapperName = _pluginType == PluginType.QuickSearch ? "tcmatch" : Path.GetFileNameWithoutExtension(_pluginAssemblyFile);
         }
         else
         {
-            outputWrapperFolder = Path.GetDirectoryName(outputWrapperName);
-            if (!Path.IsPathRooted(outputWrapperFolder))
-            {
-                outputWrapperFolder = Path.Combine(Path.GetDirectoryName(pluginAssemblyFile), outputWrapperFolder);
-            }
+            _outputWrapperFolder = Path.GetDirectoryName(_outputWrapperName);
+            if (!Path.IsPathRooted(_outputWrapperFolder))
+                _outputWrapperFolder = Path.Combine(Path.GetDirectoryName(_pluginAssemblyFile), _outputWrapperFolder);
 
-            outputWrapperName = Path.GetFileNameWithoutExtension(outputWrapperName);
+            _outputWrapperName = Path.GetFileNameWithoutExtension(_outputWrapperName);
         }
 
-        if (!Directory.Exists(outputWrapperFolder))
-        {
-            Directory.CreateDirectory(outputWrapperFolder);
-        }
+        if (!Directory.Exists(_outputWrapperFolder))
+            Directory.CreateDirectory(_outputWrapperFolder);
 
-        outputWrapperName = Path.Combine(outputWrapperFolder, outputWrapperName);
+        _outputWrapperName = Path.Combine(_outputWrapperFolder, _outputWrapperName);
     }
 
     private const string DllExportAttributeStr =
         ".custom instance void [TcPluginInterface]OY.TotalCommander.TcPluginInterface.DllExportAttribute";
 
-    private static void ProcessSource(
-        string sourcePath,
-        string outPath,
-        List<string> exportedMethods,
-        List<string> excludedMethods)
+    private static void ProcessSource(string sourcePath, string outPath, List<string> exportedMethods, List<string> excludedMethods)
     {
-        var prefix = pluginMethodPrefixes[pluginType] ?? string.Empty;
-        var cntPrefix = (pluginType.Equals(PluginType.FileSystem) ? pluginMethodPrefixes[PluginType.Content] : null)
+        var prefix = _pluginMethodPrefixes[_pluginType] ?? string.Empty;
+        var cntPrefix = (_pluginType.Equals(PluginType.FileSystem) ? _pluginMethodPrefixes[PluginType.Content] : null)
                         ?? string.Empty;
         foreach (var method in excludedMethods)
         {
@@ -1331,149 +1265,140 @@ internal sealed class Program
             if (exportedMethods.Contains(exclMethod))
             {
                 exportedMethods.Remove(exclMethod);
-                // Check if Unicode method exists 
-                if (exportedMethods.Contains(exclMethod + "W"))
+                // Check if Unicode method exists
+                if (exportedMethods.Contains($"{exclMethod}W"))
                 {
-                    exportedMethods.Remove(exclMethod + "W");
+                    exportedMethods.Remove($"{exclMethod}W");
                 }
             }
             else if (!string.IsNullOrEmpty(cntExclMethod) && exportedMethods.Contains(cntExclMethod))
             {
                 exportedMethods.Remove(cntExclMethod);
-                // Check if Unicode method exists 
-                if (exportedMethods.Contains(cntExclMethod + "W"))
+                // Check if Unicode method exists
+                if (exportedMethods.Contains($"{cntExclMethod}W"))
                 {
-                    exportedMethods.Remove(cntExclMethod + "W");
+                    exportedMethods.Remove($"{cntExclMethod}W");
                 }
             }
             else
             {
-                WriteLine(string.Format("  Excluded method '{0}' is not in exported list.", method));
+                WriteLine($"  Excluded method '{method}' is not in exported list.");
             }
         }
 
-        using (var output = new StreamWriter(outPath, false, Encoding.Default))
-        {
-            var methodIndex = 0;
-            var skipLines = 0;
-            var openBraces = 0;
-            var isMethodStatic = false;
-            var isMethodExcluded = false;
-            var methodName = "<NONE>";
-            var methodHeaders = new List<string>();
-            foreach (var srcLine in File.ReadAllLines(sourcePath, Encoding.Default))
-            {
-                if (skipLines > 0)
-                {
-                    skipLines--;
-                    continue;
-                }
+        using var output = new StreamWriter(outPath, false, Encoding.Default);
 
-                var line = srcLine.TrimStart(' ');
-                if (line.StartsWith(".method"))
+        var methodIndex = 0;
+        var openBraces = 0;
+        var isMethodStatic = false;
+        var isMethodExcluded = false;
+        var methodName = "<NONE>";
+        var methodHeaders = new List<string>();
+
+        foreach (var srcLine in File.ReadAllLines(sourcePath, Encoding.Default))
+        {
+            var line = srcLine.TrimStart(' ');
+            if (line.StartsWith(".method"))
+            {
+                isMethodStatic = line.Contains(" static ");
+                methodName = "<UNKNOWN>";
+                methodHeaders.Clear();
+            }
+
+            if (methodName.Equals("<UNKNOWN>"))
+            {
+                var pos = srcLine.IndexOf('(');
+                if (pos > 0)
                 {
-                    isMethodStatic = line.Contains(" static ");
-                    methodName = "<UNKNOWN>";
-                    methodHeaders.Clear();
+                    var pos1 = srcLine.LastIndexOf(' ', pos);
+                    if (pos1 < 0)
+                    {
+                        pos1 = 0;
+                    }
+
+                    var mName = srcLine.Substring(pos1 + 1, pos - pos1 - 1).Trim();
+                    if (!mName.Equals("marshal"))
+                    {
+                        methodName = mName;
+                    }
                 }
 
                 if (methodName.Equals("<UNKNOWN>"))
                 {
-                    var pos = srcLine.IndexOf('(');
-                    if (pos > 0)
-                    {
-                        var pos1 = srcLine.LastIndexOf(' ', pos);
-                        if (pos1 < 0)
-                        {
-                            pos1 = 0;
-                        }
-
-                        var mName = srcLine.Substring(pos1 + 1, pos - pos1 - 1).Trim();
-                        if (!mName.Equals("marshal"))
-                        {
-                            methodName = mName;
-                        }
-                    }
-
-                    if (methodName.Equals("<UNKNOWN>"))
-                    {
-                        methodHeaders.Add(srcLine);
-                    }
-                    else
-                    {
-                        isMethodExcluded = excludedMethods.Contains(methodName);
-                        if (!isMethodExcluded && methodName.EndsWith("W"))
-                        {
-                            isMethodExcluded =
-                                excludedMethods.Contains(methodName.Substring(0, methodName.Length - 1));
-                        }
-
-                        if (!isMethodExcluded && methodHeaders.Count > 0)
-                        {
-                            foreach (var s in methodHeaders)
-                            {
-                                output.WriteLine(s);
-                            }
-
-                            methodHeaders.Clear();
-                        }
-                    }
+                    methodHeaders.Add(srcLine);
                 }
-
-                if (!isMethodExcluded && line.StartsWith(DllExportAttributeStr))
+                else
                 {
-                    foreach (var ch in line)
+                    isMethodExcluded = excludedMethods.Contains(methodName);
+                    if (!isMethodExcluded && methodName.EndsWith("W"))
                     {
-                        if (ch == '(')
-                        {
-                            openBraces++;
-                        }
-
-                        if (ch == ')')
-                        {
-                            openBraces--;
-                        }
+                        isMethodExcluded =
+                            excludedMethods.Contains(methodName.Substring(0, methodName.Length - 1));
                     }
 
-                    if (isMethodStatic)
+                    if (!isMethodExcluded && methodHeaders.Count > 0)
                     {
-                        output.WriteLine(".export [{0}] as {1}", methodIndex + 1, exportedMethods[methodIndex]);
-                        methodIndex++;
-                    }
-
-                    continue;
-                }
-
-                if (!isMethodExcluded && openBraces > 0)
-                {
-                    foreach (var ch in line)
-                    {
-                        if (ch == '(')
+                        foreach (var s in methodHeaders)
                         {
-                            openBraces++;
+                            output.WriteLine(s);
                         }
 
-                        if (ch == ')')
-                        {
-                            openBraces--;
-                        }
+                        methodHeaders.Clear();
                     }
-
-                    continue;
-                }
-
-                if (isMethodExcluded && line.StartsWith(@"} // end of method"))
-                {
-                    isMethodExcluded = false;
-                    methodName = "<NONE>";
-                    continue;
-                }
-
-                if (!isMethodExcluded && !methodName.Equals("<UNKNOWN>"))
-                {
-                    output.WriteLine(srcLine);
                 }
             }
+
+            if (!isMethodExcluded && line.StartsWith(DllExportAttributeStr))
+            {
+                foreach (var ch in line)
+                {
+                    switch (ch)
+                    {
+                        case '(':
+                            openBraces++;
+                            break;
+                        case ')':
+                            openBraces--;
+                            break;
+                    }
+                }
+
+                if (isMethodStatic)
+                {
+                    output.WriteLine(".export [{0}] as {1}", methodIndex + 1, exportedMethods[methodIndex]);
+                    methodIndex++;
+                }
+
+                continue;
+            }
+
+            if (!isMethodExcluded && openBraces > 0)
+            {
+                foreach (var ch in line)
+                {
+                    switch (ch)
+                    {
+                        case '(':
+                            openBraces++;
+                            break;
+                        case ')':
+                            openBraces--;
+                            break;
+                    }
+                }
+
+                continue;
+            }
+
+            if (isMethodExcluded && line.StartsWith(@"} // end of method"))
+            {
+                isMethodExcluded = false;
+                methodName = "<NONE>";
+                continue;
+            }
+
+            if (!isMethodExcluded && !methodName.Equals("<UNKNOWN>"))
+                output.WriteLine(srcLine);
         }
     }
 
@@ -1505,10 +1430,8 @@ internal sealed class Program
 
     private static void WriteLine(string text, bool detailed)
     {
-        if (verbose || !detailed)
-        {
+        if (_verbose || !detailed)
             Console.WriteLine(text);
-        }
     }
 
     #endregion Private Methods

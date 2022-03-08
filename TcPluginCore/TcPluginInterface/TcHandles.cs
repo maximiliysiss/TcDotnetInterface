@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 internal class RefCountObject
 {
@@ -28,61 +28,61 @@ public static class TcHandles
 {
     #region Handle Management
 
-    private static readonly Dictionary<IntPtr, RefCountObject> handleDictionary = new();
+    private static readonly Dictionary<IntPtr, RefCountObject> _handleDictionary = new();
 
-    private static int lastHandle;
-    private static readonly object handleSyncObj = new();
+    private static int _lastHandle;
+    private static readonly object _handleSyncObj = new();
 
     public static IntPtr AddHandle(object obj)
     {
-        Monitor.Enter(handleSyncObj);
+        Monitor.Enter(_handleSyncObj);
         try
         {
-            lastHandle++;
-            var handle = new IntPtr(lastHandle);
-            handleDictionary.Add(handle, new RefCountObject(obj));
+            _lastHandle++;
+            var handle = new IntPtr(_lastHandle);
+            _handleDictionary.Add(handle, new RefCountObject(obj));
             return handle;
         }
         finally
         {
-            Monitor.Exit(handleSyncObj);
+            Monitor.Exit(_handleSyncObj);
         }
     }
 
     public static void AddHandle(IntPtr handle, object obj)
     {
-        Monitor.Enter(handleSyncObj);
+        Monitor.Enter(_handleSyncObj);
         try
         {
-            handleDictionary.Add(handle, new RefCountObject(obj));
+            _handleDictionary.Add(handle, new RefCountObject(obj));
         }
         finally
         {
-            Monitor.Exit(handleSyncObj);
+            Monitor.Exit(_handleSyncObj);
         }
     }
 
     public static object GetObject(IntPtr handle)
     {
-        Monitor.Enter(handleSyncObj);
+        Monitor.Enter(_handleSyncObj);
         try
         {
-            return handleDictionary.ContainsKey(handle) ? handleDictionary[handle].Obj : null;
+            return _handleDictionary.ContainsKey(handle) ? _handleDictionary[handle].Obj : null;
         }
         finally
         {
-            Monitor.Exit(handleSyncObj);
+            Monitor.Exit(_handleSyncObj);
         }
     }
 
     public static int GetRefCount(IntPtr handle)
     {
-        Monitor.Enter(handleSyncObj);
+        Monitor.Enter(_handleSyncObj);
         try
         {
-            if (handleDictionary.ContainsKey(handle))
+            if (_handleDictionary.ContainsKey(handle))
             {
-                return handleDictionary[handle].RefCount;
+                return _handleDictionary[handle].RefCount;
             }
             else
             {
@@ -91,32 +91,32 @@ public static class TcHandles
         }
         finally
         {
-            Monitor.Exit(handleSyncObj);
+            Monitor.Exit(_handleSyncObj);
         }
     }
 
     public static void UpdateHandle(IntPtr handle, object obj)
     {
-        Monitor.Enter(handleSyncObj);
+        Monitor.Enter(_handleSyncObj);
         try
         {
-            handleDictionary[handle].Update(obj);
+            _handleDictionary[handle].Update(obj);
         }
         finally
         {
-            Monitor.Exit(handleSyncObj);
+            Monitor.Exit(_handleSyncObj);
         }
     }
 
     public static int RemoveHandle(IntPtr handle)
     {
-        Monitor.Enter(handleSyncObj);
+        Monitor.Enter(_handleSyncObj);
         try
         {
-            if (handleDictionary.ContainsKey(handle))
+            if (_handleDictionary.ContainsKey(handle))
             {
-                var result = handleDictionary[handle].RefCount;
-                handleDictionary.Remove(handle);
+                var result = _handleDictionary[handle].RefCount;
+                _handleDictionary.Remove(handle);
                 return result;
             }
             else
@@ -126,7 +126,7 @@ public static class TcHandles
         }
         finally
         {
-            Monitor.Exit(handleSyncObj);
+            Monitor.Exit(_handleSyncObj);
         }
     }
 

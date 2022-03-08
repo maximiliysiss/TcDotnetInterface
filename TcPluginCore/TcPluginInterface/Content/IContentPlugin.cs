@@ -1,4 +1,4 @@
-﻿namespace OY.TotalCommander.TcPluginInterface.Content;
+﻿namespace TcPluginInterface.Content;
 
 public interface IContentPlugin
 {

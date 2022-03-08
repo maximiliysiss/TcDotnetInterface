@@ -1,68 +1,68 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Runtime.Remoting.Lifetime;
 using System.Security.Permissions;
-using OY.TotalCommander.TcPluginInterface.Content;
+using TcPluginInterface.Content;
 #if TRACE
-using System.Diagnostics;
 #endif
 
-namespace OY.TotalCommander.TcPluginInterface.FileSystem;
+namespace TcPluginInterface.FileSystem;
 
 public class FsPlugin : TcPlugin, IFsPlugin
 {
     #region MarshalByRefObject - Lifetime initialization
 
-    [SecurityPermissionAttribute(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
+    [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
     public override object InitializeLifetimeService()
     {
         var lease = (ILease)base.InitializeLifetimeService();
-        if (lease != null && lease.CurrentState == LeaseState.Initial)
+        if (lease == null || lease.CurrentState != LeaseState.Initial)
+            return lease;
+
+        // By default we set infinite lifetime for each created plugin (initialLifeTime = 0)
+        // To change, set "initialLifeTime" key in plugin configuration file
+        var initialLifeTime = TimeSpan.Zero;
+        try
         {
-            // By default we set infinite lifetime for each created plugin (initialLifeTime = 0)
-            // To change, set "initialLifeTime" key in plugin configuration file
-            var initialLifeTime = TimeSpan.Zero;
-            try
-            {
-                initialLifeTime = TimeSpan.Parse(Settings["initialLifeTime"]);
-            }
-            catch (ArgumentNullException)
-            {
-            }
-            catch (FormatException)
-            {
-            }
+            initialLifeTime = TimeSpan.Parse(Settings["initialLifeTime"]);
+        }
+        catch (ArgumentNullException)
+        {
+        }
+        catch (FormatException)
+        {
+        }
 
-            // set the Initial lease time if it's configured
-            if (!initialLifeTime.Equals(TimeSpan.MinValue))
-            {
-                lease.InitialLeaseTime = initialLifeTime;
-            }
+        // set the Initial lease time if it's configured
+        if (!initialLifeTime.Equals(TimeSpan.MinValue))
+        {
+            lease.InitialLeaseTime = initialLifeTime;
+        }
 
-            // lease.InitialLeaseTime = 0 means infinite lifetime for the remote object, it's enough. 
-            if (!lease.InitialLeaseTime.Equals(TimeSpan.Zero))
-            {
-                var renewOnCallTime = TimeSpan.MinValue;
-                try
-                {
-                    renewOnCallTime = TimeSpan.Parse(Settings["renewOnCallTime"]);
-                }
-                catch (ArgumentNullException)
-                {
-                }
-                catch (FormatException)
-                {
-                }
+        // lease.InitialLeaseTime = 0 means infinite lifetime for the remote object, it's enough.
+        if (lease.InitialLeaseTime.Equals(TimeSpan.Zero))
+            return lease;
 
-                // Set the RenewOnCall lease time - time added to object's lifetime after each client call
-                if (!renewOnCallTime.Equals(TimeSpan.MinValue))
-                {
-                    lease.RenewOnCallTime = renewOnCallTime;
-                }
-            }
+        var renewOnCallTime = TimeSpan.MinValue;
+        try
+        {
+            renewOnCallTime = TimeSpan.Parse(Settings["renewOnCallTime"]);
+        }
+        catch (ArgumentNullException)
+        {
+        }
+        catch (FormatException)
+        {
+        }
+
+        // Set the RenewOnCall lease time - time added to object's lifetime after each client call
+        if (!renewOnCallTime.Equals(TimeSpan.MinValue))
+        {
+            lease.RenewOnCallTime = renewOnCallTime;
         }
 
         return lease;
@@ -70,13 +70,7 @@ public class FsPlugin : TcPlugin, IFsPlugin
 
     #endregion
 
-    public override void CreatePassword(int cryptoNumber, int flags)
-    {
-        if (Password == null)
-        {
-            Password = new FsPassword(this, cryptoNumber, flags);
-        }
-    }
+    public override void CreatePassword(int cryptoNumber, int flags) => Password ??= new FsPassword(this, cryptoNumber, flags);
 
     #region Properties
 
@@ -87,9 +81,7 @@ public class FsPlugin : TcPlugin, IFsPlugin
     public bool IsTempFilePanel { get; protected set; }
 
     public override string TraceTitle =>
-        Convert.ToBoolean(Settings["useTitleForTrace"])
-            ? Title
-            : PluginNumber.ToString(CultureInfo.InvariantCulture);
+        Convert.ToBoolean(Settings["useTitleForTrace"]) ? Title : PluginNumber.ToString(CultureInfo.InvariantCulture);
 
     public bool UnloadExpired { get; }
 

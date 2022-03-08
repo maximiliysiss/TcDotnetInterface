@@ -1,4 +1,4 @@
-﻿namespace OY.TotalCommander.TcPluginTools
+﻿namespace TcPluginTools
 {
     partial class ErrorDialog
     {

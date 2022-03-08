@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using OY.TotalCommander.TcPluginInterface.Content;
-using OY.TotalCommander.TcPluginInterface.FileSystem;
-using OY.TotalCommander.TcPluginInterface.Lister;
-using OY.TotalCommander.TcPluginInterface.Packer;
-using OY.TotalCommander.TcPluginInterface.QuickSearch;
+using TcPluginInterface.Content;
+using TcPluginInterface.FileSystem;
+using TcPluginInterface.Lister;
+using TcPluginInterface.Packer;
+using TcPluginInterface.QuickSearch;
 using FileTime = System.Runtime.InteropServices.ComTypes.FILETIME;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 public static class TcUtils
 {
@@ -19,7 +19,7 @@ public static class TcUtils
 
     #region Common Dictionaries
 
-    public static Dictionary<PluginType, string> PluginInterfaces =
+    public static readonly Dictionary<PluginType, string> PluginInterfaces =
         new()
         {
             { PluginType.Content, typeof(IContentPlugin).FullName },
@@ -29,7 +29,7 @@ public static class TcUtils
             { PluginType.QuickSearch, typeof(IQuickSearchPlugin).FullName }
         };
 
-    public static Dictionary<PluginType, string> PluginNames =
+    public static readonly Dictionary<PluginType, string> PluginNames =
         new()
         {
             { PluginType.Content, "Content " },
@@ -80,7 +80,7 @@ public static class TcUtils
         }
         catch (Exception ex)
         {
-            throw new Exception(className + " - Class loading error.", ex);
+            throw new Exception($"{className} - Class loading error.", ex);
         }
     }
 
@@ -88,7 +88,7 @@ public static class TcUtils
 
     private static Type FindClass(string assemblyPath, Type interfaceType, string className)
     {
-        var interfaceTypeName = interfaceType == null ? null : interfaceType.FullName;
+        var interfaceTypeName = interfaceType?.FullName;
         if (!Path.IsPathRooted(assemblyPath))
         {
             assemblyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, assemblyPath);
@@ -234,27 +234,24 @@ public static class TcUtils
         return result;
     }
 
-    public static string ReadStringUni(IntPtr addr) =>
-        addr == IntPtr.Zero
-            ? string.Empty
-            : Marshal.PtrToStringUni(addr);
+    public static string ReadStringUni(IntPtr addr) => addr == IntPtr.Zero ? string.Empty : Marshal.PtrToStringUni(addr);
 
     public static List<string> ReadStringListUni(IntPtr addr)
     {
         var result = new List<string>();
-        if (addr != IntPtr.Zero)
-        {
-            while (true)
-            {
-                var s = ReadStringUni(addr);
-                if (string.IsNullOrEmpty(s))
-                {
-                    break;
-                }
+        if (addr == IntPtr.Zero)
+            return result;
 
-                result.Add(s);
-                addr = new IntPtr(addr.ToInt64() + (s.Length + 1) * 2);
+        while (true)
+        {
+            var s = ReadStringUni(addr);
+            if (string.IsNullOrEmpty(s))
+            {
+                break;
             }
+
+            result.Add(s);
+            addr = new IntPtr(addr.ToInt64() + (s.Length + 1) * 2);
         }
 
         return result;

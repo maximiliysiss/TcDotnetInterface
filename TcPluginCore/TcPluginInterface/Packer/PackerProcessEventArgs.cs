@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.Packer;
+namespace TcPluginInterface.Packer;
 
 [Serializable]
 public class PackerProcessEventArgs : PluginEventArgs

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.Content;
+namespace TcPluginInterface.Content;
 // Enumerations below are managed wrappers for corresponding integer flags discribed in 
 // TC "FS-Plugin writer's guide" and "Content-Plugin writer's guide" (www.ghisler.com/plugins.htm) 
 

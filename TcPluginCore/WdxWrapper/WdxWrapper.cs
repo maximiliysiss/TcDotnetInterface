@@ -2,11 +2,11 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using OY.TotalCommander.TcPluginInterface;
-using OY.TotalCommander.TcPluginInterface.Content;
-using OY.TotalCommander.TcPluginTools;
+using TcPluginInterface;
+using TcPluginInterface.Content;
+using TcPluginTools;
 
-namespace OY.TotalCommander.WdxWrapper;
+namespace WdxWrapper;
 
 public class ContentWrapper
 {
@@ -17,16 +17,16 @@ public class ContentWrapper
     #region Properties
 
     private static ContentPlugin Plugin =>
-        plugin ??
-        (plugin = (ContentPlugin)TcPluginLoader.GetTcPlugin(pluginWrapperDll, PluginType.Content));
+        _plugin ??
+        (_plugin = (ContentPlugin)TcPluginLoader.GetTcPlugin(_pluginWrapperDll, PluginType.Content));
 
     #endregion Properties
 
     #region Variables
 
-    private static ContentPlugin plugin;
-    private static readonly string pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
-    private static string callSignature;
+    private static ContentPlugin _plugin;
+    private static readonly string _pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
+    private static string _callSignature;
 
     #endregion Variables
 
@@ -38,11 +38,10 @@ public class ContentWrapper
     public static int GetSupportedField(int fieldIndex, IntPtr fieldName, IntPtr units, int maxLen)
     {
         var result = ContentFieldType.NoMoreFields;
-        callSignature = string.Format("ContentGetSupportedField ({0})", fieldIndex);
+        _callSignature = $"ContentGetSupportedField ({fieldIndex})";
         try
         {
-            string fieldNameStr, unitsStr;
-            result = Plugin.GetSupportedField(fieldIndex, out fieldNameStr, out unitsStr, maxLen);
+            result = Plugin.GetSupportedField(fieldIndex, out var fieldNameStr, out var unitsStr, maxLen);
             if (result != ContentFieldType.NoMoreFields)
             {
                 if (string.IsNullOrEmpty(fieldNameStr))
@@ -64,13 +63,7 @@ public class ContentWrapper
             }
 
             // !!! may produce much trace info !!!
-            TraceCall(
-                TraceLevel.Verbose,
-                string.Format(
-                    "{0} - {1} - {2}",
-                    result.ToString(),
-                    fieldNameStr,
-                    unitsStr));
+            TraceCall(TraceLevel.Verbose, $"{result.ToString()} - {fieldNameStr} - {unitsStr}");
         }
         catch (Exception ex)
         {
@@ -106,15 +99,9 @@ public class ContentWrapper
         GetValueResult result;
         var fieldType = ContentFieldType.NoMoreFields;
         var gvFlags = (GetValueFlags)flags;
-        callSignature = string.Format(
-            "ContentGetValue '{0}' ({1}/{2}/{3})",
-            fileName,
-            fieldIndex,
-            unitIndex,
-            gvFlags.ToString());
+        _callSignature = $"ContentGetValue '{fileName}' ({fieldIndex}/{unitIndex}/{gvFlags.ToString()})";
         try
         {
-            string fieldValueStr;
             // TODO: add - comments where .NET plugin interface differs from TC
             result = Plugin.GetValue(
                 fileName,
@@ -122,11 +109,9 @@ public class ContentWrapper
                 unitIndex,
                 maxLen,
                 gvFlags,
-                out fieldValueStr,
+                out var fieldValueStr,
                 out fieldType);
-            if (result == GetValueResult.Success
-                || result == GetValueResult.Delayed
-                || result == GetValueResult.OnDemand)
+            if (result is GetValueResult.Success or GetValueResult.Delayed or GetValueResult.OnDemand)
             {
                 var resultType =
                     result == GetValueResult.Success ? fieldType : ContentFieldType.WideString;
@@ -134,7 +119,7 @@ public class ContentWrapper
             }
 
             // !!! may produce much trace info !!!
-            TraceCall(TraceLevel.Verbose, string.Format("{0} - {1}", result.ToString(), fieldValueStr));
+            TraceCall(TraceLevel.Verbose, $"{result.ToString()} - {fieldValueStr}");
         }
         catch (Exception ex)
         {
@@ -155,7 +140,7 @@ public class ContentWrapper
     [DllExport(EntryPoint = "ContentStopGetValueW")]
     public static void StopGetValueW([MarshalAs(UnmanagedType.LPWStr)] string fileName)
     {
-        callSignature = "ContentStopGetValue";
+        _callSignature = "ContentStopGetValue";
         try
         {
             Plugin.StopGetValue(fileName);
@@ -176,7 +161,7 @@ public class ContentWrapper
     public static int GetDefaultSortOrder(int fieldIndex)
     {
         var result = DefaultSortOrder.Asc;
-        callSignature = string.Format("ContentGetDefaultSortOrder ({0})", fieldIndex);
+        _callSignature = $"ContentGetDefaultSortOrder ({fieldIndex})";
         try
         {
             result = Plugin.GetDefaultSortOrder(fieldIndex);
@@ -198,7 +183,7 @@ public class ContentWrapper
     [DllExport(EntryPoint = "ContentPluginUnloading")]
     public static void PluginUnloading()
     {
-        callSignature = "ContentPluginUnloading";
+        _callSignature = "ContentPluginUnloading";
         try
         {
             Plugin.PluginUnloading();
@@ -219,7 +204,7 @@ public class ContentWrapper
     public static int GetSupportedFieldFlags(int fieldIndex)
     {
         var result = SupportedFieldOptions.None;
-        callSignature = string.Format("ContentGetSupportedFieldFlags ({0})", fieldIndex);
+        _callSignature = $"ContentGetSupportedFieldFlags ({fieldIndex})";
         try
         {
             result = Plugin.GetSupportedFieldFlags(fieldIndex);
@@ -260,12 +245,7 @@ public class ContentWrapper
         SetValueResult result;
         var fldType = (ContentFieldType)fieldType;
         var svFlags = (SetValueFlags)flags;
-        callSignature = string.Format(
-            "ContentSetValue '{0}' ({1}/{2}/{3})",
-            fileName,
-            fieldIndex,
-            unitIndex,
-            svFlags.ToString());
+        _callSignature = $"ContentSetValue '{fileName}' ({fieldIndex}/{unitIndex}/{svFlags.ToString()})";
         try
         {
             var value = new ContentValue(fieldValue, fldType);
@@ -277,7 +257,7 @@ public class ContentWrapper
                 value.StrValue,
                 svFlags);
 
-            TraceCall(TraceLevel.Info, string.Format("{0} - {1}", result.ToString(), value.StrValue));
+            TraceCall(TraceLevel.Info, $"{result.ToString()} - {value.StrValue}");
         }
         catch (Exception ex)
         {
@@ -296,7 +276,7 @@ public class ContentWrapper
     [DllExport(EntryPoint = "ContentGetDetectString")]
     public static int GetDetectString(IntPtr detectString, int maxLen)
     {
-        callSignature = "GetDetectString";
+        _callSignature = "GetDetectString";
         try
         {
             TcUtils.WriteStringAnsi(Plugin.DetectString, detectString, maxLen);
@@ -319,7 +299,7 @@ public class ContentWrapper
     [DllExport(EntryPoint = "ContentSetDefaultParams")]
     public static void SetDefaultParams(ref PluginDefaultParams defParams)
     {
-        callSignature = "SetDefaultParams";
+        _callSignature = "SetDefaultParams";
         try
         {
             Plugin.DefaultParams = defParams;
@@ -350,11 +330,7 @@ public class ContentWrapper
         SetValueResult result;
         var fldType = (ContentFieldType)fieldType;
         var evFlags = (EditValueFlags)flags;
-        callSignature = string.Format(
-            "ContentEditValue ({0}/{1}/{2})",
-            fieldIndex,
-            unitIndex,
-            evFlags.ToString());
+        _callSignature = $"ContentEditValue ({fieldIndex}/{unitIndex}/{evFlags.ToString()})";
         try
         {
             var tcWin = new TcWindow(parentWin);
@@ -375,7 +351,7 @@ public class ContentWrapper
                 value.CopyTo(fieldValue);
             }
 
-            TraceCall(TraceLevel.Info, string.Format("{0} - {1}", result.ToString(), value.StrValue));
+            TraceCall(TraceLevel.Info, $"{result.ToString()} - {value.StrValue}");
         }
         catch (Exception ex)
         {
@@ -396,7 +372,7 @@ public class ContentWrapper
     [DllExport(EntryPoint = "ContentSendStateInformationW")]
     public static void SendStateInformationW(int state, [MarshalAs(UnmanagedType.LPWStr)] string path)
     {
-        callSignature = "ContentSendStateInformation";
+        _callSignature = "ContentSendStateInformation";
         try
         {
             Plugin.SendStateInformation((StateChangeInfo)state, path);
@@ -430,21 +406,16 @@ public class ContentWrapper
         [MarshalAs(UnmanagedType.LPWStr)] string fileName2,
         ref ContentFileDetails contentFileDetails)
     {
-        callSignature = string.Format(
-            "ContentCompareFiles '{0}' => '{1}' ({2})",
-            fileName1,
-            fileName2,
-            compareIndex);
+        _callSignature = $"ContentCompareFiles '{fileName1}' => '{fileName2}' ({compareIndex})";
         TcCallback.SetContentPluginCallback(progressCallback);
         try
         {
-            int iconResourceId;
             var result = Plugin.CompareFiles(
                 compareIndex,
                 fileName1,
                 fileName2,
                 contentFileDetails,
-                out iconResourceId);
+                out var iconResourceId);
 
             TraceCall(TraceLevel.Info, result.ToString());
 
@@ -474,12 +445,12 @@ public class ContentWrapper
 
     #region Tracing & Exceptions
 
-    public static void ProcessException(Exception ex) => TcPluginLoader.ProcessException(plugin, false, callSignature, ex);
+    public static void ProcessException(Exception ex) => TcPluginLoader.ProcessException(_plugin, false, _callSignature, ex);
 
     public static void TraceCall(TraceLevel level, string result)
     {
-        TcTrace.TraceCall(plugin, level, callSignature, result);
-        callSignature = null;
+        TcTrace.TraceCall(_plugin, level, _callSignature, result);
+        _callSignature = null;
     }
 
     #endregion Tracing & Exceptions

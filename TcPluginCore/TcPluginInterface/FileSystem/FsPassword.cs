@@ -1,31 +1,22 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.FileSystem;
+namespace TcPluginInterface.FileSystem;
 
 [Serializable]
 public class FsPassword : PluginPassword
 {
-    public FsPassword(TcPlugin plugin, int cryptoNumber, int flags)
-        : base(plugin, cryptoNumber, flags)
+    public FsPassword(TcPlugin plugin, int cryptoNumber, int flags) : base(plugin, cryptoNumber, flags)
     {
     }
 
-    protected override CryptResult GetCryptResult(int tcCryptResult)
-    {
-        switch (tcCryptResult)
+    protected override CryptResult GetCryptResult(int tcCryptResult) =>
+        tcCryptResult switch
         {
-            case (int)FileSystemExitCode.OK:
-                return CryptResult.OK;
-            case (int)FileSystemExitCode.NotSupported:
-                return CryptResult.Failed;
-            case (int)FileSystemExitCode.FileNotFound:
-                return CryptResult.NoMasterPassword;
-            case (int)FileSystemExitCode.ReadError:
-                return CryptResult.PasswordNotFound;
-            case (int)FileSystemExitCode.WriteError:
-                return CryptResult.WriteError;
-            default:
-                return CryptResult.PasswordNotFound;
-        }
-    }
+            (int)FileSystemExitCode.Ok => CryptResult.Ok,
+            (int)FileSystemExitCode.NotSupported => CryptResult.Failed,
+            (int)FileSystemExitCode.FileNotFound => CryptResult.NoMasterPassword,
+            (int)FileSystemExitCode.ReadError => CryptResult.PasswordNotFound,
+            (int)FileSystemExitCode.WriteError => CryptResult.WriteError,
+            _ => CryptResult.PasswordNotFound
+        };
 }

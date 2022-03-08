@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
-namespace OY.TotalCommander.TcPluginInterface.FileSystem;
+namespace TcPluginInterface.FileSystem;
 
 // Used as parameter type for FindFirst and FindNext methods
 [CLSCompliant(false)]
@@ -14,42 +14,42 @@ public class FindData
 
     public void CopyTo(IntPtr ptr, bool isUnicode)
     {
-        if (ptr != IntPtr.Zero)
+        if (ptr == IntPtr.Zero)
+            return;
+
+        if (isUnicode)
         {
-            if (isUnicode)
+            var data = new TcFindDataW
             {
-                var data = new TcFindDataW
-                {
-                    FileAttributes = (int)Attributes,
-                    CreationTime = TcUtils.GetFileTime(CreationTime),
-                    LastAccessTime = TcUtils.GetFileTime(LastAccessTime),
-                    LastWriteTime = TcUtils.GetFileTime(LastWriteTime),
-                    FileSizeHigh = TcUtils.GetUHigh(FileSize),
-                    FileSizeLow = TcUtils.GetULow(FileSize),
-                    Reserved0 = Reserved0,
-                    Reserved1 = Reserved1,
-                    FileName = FileName,
-                    AlternateFileName = string.Empty
-                };
-                Marshal.StructureToPtr(data, ptr, false);
-            }
-            else
+                FileAttributes = (int)Attributes,
+                CreationTime = TcUtils.GetFileTime(CreationTime),
+                LastAccessTime = TcUtils.GetFileTime(LastAccessTime),
+                LastWriteTime = TcUtils.GetFileTime(LastWriteTime),
+                FileSizeHigh = TcUtils.GetUHigh(FileSize),
+                FileSizeLow = TcUtils.GetULow(FileSize),
+                Reserved0 = Reserved0,
+                Reserved1 = Reserved1,
+                FileName = FileName,
+                AlternateFileName = string.Empty
+            };
+            Marshal.StructureToPtr(data, ptr, false);
+        }
+        else
+        {
+            var data = new TcFindData
             {
-                var data = new TcFindData
-                {
-                    FileAttributes = (int)Attributes,
-                    CreationTime = TcUtils.GetFileTime(CreationTime),
-                    LastAccessTime = TcUtils.GetFileTime(LastAccessTime),
-                    LastWriteTime = TcUtils.GetFileTime(LastWriteTime),
-                    FileSizeHigh = TcUtils.GetUHigh(FileSize),
-                    FileSizeLow = TcUtils.GetULow(FileSize),
-                    Reserved0 = Reserved0,
-                    Reserved1 = Reserved1,
-                    FileName = FileName,
-                    AlternateFileName = string.Empty
-                };
-                Marshal.StructureToPtr(data, ptr, false);
-            }
+                FileAttributes = (int)Attributes,
+                CreationTime = TcUtils.GetFileTime(CreationTime),
+                LastAccessTime = TcUtils.GetFileTime(LastAccessTime),
+                LastWriteTime = TcUtils.GetFileTime(LastWriteTime),
+                FileSizeHigh = TcUtils.GetUHigh(FileSize),
+                FileSizeLow = TcUtils.GetULow(FileSize),
+                Reserved0 = Reserved0,
+                Reserved1 = Reserved1,
+                FileName = FileName,
+                AlternateFileName = string.Empty
+            };
+            Marshal.StructureToPtr(data, ptr, false);
         }
     }
 
@@ -72,21 +72,13 @@ public class FindData
 
     public FindData(string fileName) => FileName = fileName;
 
-    public FindData(string fileName, ulong fileSize)
-        : this(fileName) =>
-        FileSize = fileSize;
+    public FindData(string fileName, ulong fileSize) : this(fileName) => FileSize = fileSize;
 
-    public FindData(string fileName, ulong fileSize, FileAttributes attributes)
-        : this(fileName, fileSize) =>
-        Attributes = attributes;
+    public FindData(string fileName, ulong fileSize, FileAttributes attributes) : this(fileName, fileSize) => Attributes = attributes;
 
-    public FindData(string fileName, ulong fileSize, DateTime? lastWriteTime)
-        : this(fileName, fileSize) =>
-        LastWriteTime = lastWriteTime;
+    public FindData(string fileName, ulong fileSize, DateTime? lastWriteTime) : this(fileName, fileSize) => LastWriteTime = lastWriteTime;
 
-    public FindData(string fileName, FileAttributes attributes)
-        : this(fileName) =>
-        Attributes = attributes;
+    public FindData(string fileName, FileAttributes attributes) : this(fileName) => Attributes = attributes;
 
     public FindData(string fileName, ulong fileSize, FileAttributes attributes, DateTime? lastWriteTime)
         : this(fileName, fileSize, lastWriteTime) =>
@@ -98,8 +90,7 @@ public class FindData
         FileAttributes attributes,
         DateTime? lastWriteTime,
         DateTime? creationTime,
-        DateTime? lastAccessTime)
-        : this(fileName, fileSize, attributes, lastWriteTime)
+        DateTime? lastAccessTime) : this(fileName, fileSize, attributes, lastWriteTime)
     {
         CreationTime = creationTime;
         LastAccessTime = lastAccessTime;

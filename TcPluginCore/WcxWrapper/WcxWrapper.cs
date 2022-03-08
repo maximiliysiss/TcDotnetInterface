@@ -4,11 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using OY.TotalCommander.TcPluginInterface;
-using OY.TotalCommander.TcPluginInterface.Packer;
-using OY.TotalCommander.TcPluginTools;
+using TcPluginInterface;
+using TcPluginInterface.Packer;
+using TcPluginTools;
 
-namespace OY.TotalCommander.WcxWrapper;
+namespace WcxWrapper;
 
 public class PackerWrapper
 {
@@ -19,16 +19,16 @@ public class PackerWrapper
     #region Properties
 
     private static PackerPlugin Plugin =>
-        plugin ??
-        (plugin = (PackerPlugin)TcPluginLoader.GetTcPlugin(pluginWrapperDll, PluginType.Packer));
+        _plugin ??
+        (_plugin = (PackerPlugin)TcPluginLoader.GetTcPlugin(_pluginWrapperDll, PluginType.Packer));
 
     #endregion Properties
 
     #region Variables
 
-    private static PackerPlugin plugin;
-    private static readonly string pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
-    private static string callSignature;
+    private static PackerPlugin _plugin;
+    private static readonly string _pluginWrapperDll = Assembly.GetExecutingAssembly().Location;
+    private static string _callSignature;
 
     #endregion Variables
 
@@ -55,17 +55,17 @@ public class PackerWrapper
     public static IntPtr OpenArchiveInternal(OpenArchiveData data)
     {
         var result = IntPtr.Zero;
-        callSignature = string.Format("OpenArchive {0} ({1})", data.ArchiveName, data.Mode.ToString());
+        _callSignature = $"OpenArchive {data.ArchiveName} ({data.Mode.ToString()})";
         try
         {
             var o = Plugin.OpenArchive(ref data);
-            if (o != null && data.Result == PackerResult.OK)
+            if (o != null && data.Result == PackerResult.Ok)
             {
                 result = TcHandles.AddHandle(o);
                 data.Update();
             }
 
-            TraceCall(TraceLevel.Info, result == IntPtr.Zero ? string.Format("Error ({0})", data.Result.ToString()) : result.ToString());
+            TraceCall(TraceLevel.Info, result == IntPtr.Zero ? $"Error ({data.Result.ToString()})" : result.ToString());
         }
         catch (Exception ex)
         {
@@ -96,7 +96,7 @@ public class PackerWrapper
     public static int ReadHeaderInternal(IntPtr arcData, IntPtr headerData, HeaderDataMode mode)
     {
         var result = PackerResult.EndArchive;
-        callSignature = string.Format("ReadHeader ({0})", arcData.ToString());
+        _callSignature = $"ReadHeader ({arcData.ToString()})";
         try
         {
             var o = TcHandles.GetObject(arcData);
@@ -105,9 +105,8 @@ public class PackerWrapper
                 return (int)PackerResult.ErrorOpen;
             }
 
-            HeaderData header;
-            result = Plugin.ReadHeader(ref o, out header);
-            if (result == PackerResult.OK)
+            result = Plugin.ReadHeader(ref o, out var header);
+            if (result == PackerResult.Ok)
             {
                 header.CopyTo(headerData, mode);
                 TcHandles.UpdateHandle(arcData, o);
@@ -116,10 +115,7 @@ public class PackerWrapper
             // !!! may produce much trace info !!!
             TraceCall(
                 TraceLevel.Verbose,
-                string.Format(
-                    "{0} ({1})",
-                    result.ToString(),
-                    result == PackerResult.OK ? header.FileName : null));
+                $"{result.ToString()} ({(result == PackerResult.Ok ? header.FileName : null)})");
         }
         catch (Exception ex)
         {
@@ -151,18 +147,14 @@ public class PackerWrapper
         var result = PackerResult.NotSupported;
         var oper = (ProcessFileOperation)operation;
         var fileName = string.IsNullOrEmpty(destPath) ? destName : Path.Combine(destPath, destName);
-        callSignature = string.Format(
-            "ProcessFile ({0}, {1}, {2})",
-            arcData.ToString(),
-            oper.ToString(),
-            fileName);
+        _callSignature = $"ProcessFile ({arcData.ToString()}, {oper.ToString()}, {fileName})";
         try
         {
             var o = TcHandles.GetObject(arcData);
             if (o != null)
             {
                 result = Plugin.ProcessFile(o, oper, fileName);
-                if (result == PackerResult.OK)
+                if (result == PackerResult.Ok)
                 {
                     TcHandles.UpdateHandle(arcData, o);
                 }
@@ -187,22 +179,19 @@ public class PackerWrapper
     public static int CloseArchive(IntPtr arcData)
     {
         var result = PackerResult.ErrorClose;
-        callSignature = string.Format("FindClose ({0})", arcData.ToString());
+        _callSignature = $"FindClose ({arcData.ToString()})";
         try
         {
             var o = TcHandles.GetObject(arcData);
             if (o != null)
             {
                 result = Plugin.CloseArchive(o);
-                var disp = o as IDisposable;
-                if (disp != null)
-                {
+                if (o is IDisposable disp)
                     disp.Dispose();
-                }
 
                 var count = (TcHandles.RemoveHandle(arcData) - 1) / 2;
 
-                TraceCall(TraceLevel.Info, string.Format("{0} items.", count));
+                TraceCall(TraceLevel.Info, $"{count} items.");
             }
         }
         catch (Exception ex)
@@ -221,7 +210,7 @@ public class PackerWrapper
     [DllExport(EntryPoint = "SetChangeVolProc")]
     public static void SetChangeVolProc(IntPtr arcData, ChangeVolCallback changeVolProc)
     {
-        callSignature = string.Format("SetChangeVolProc ({0})", arcData.ToString());
+        _callSignature = $"SetChangeVolProc ({arcData.ToString()})";
         try
         {
             TcCallback.SetPackerPluginCallbacks(changeVolProc, null, null, null, null, null);
@@ -239,7 +228,7 @@ public class PackerWrapper
     [DllExport(EntryPoint = "SetChangeVolProcW")]
     public static void SetChangeVolProcW(IntPtr arcData, ChangeVolCallbackW changeVolProcW)
     {
-        callSignature = string.Format("SetChangeVolProcW ({0})", arcData.ToString());
+        _callSignature = $"SetChangeVolProcW ({arcData.ToString()})";
         try
         {
             TcCallback.SetPackerPluginCallbacks(null, changeVolProcW, null, null, null, null);
@@ -262,7 +251,7 @@ public class PackerWrapper
     [DllExport(EntryPoint = "SetProcessDataProc")]
     public static void SetProcessDataProc(IntPtr arcData, ProcessDataCallback processDataProc)
     {
-        callSignature = string.Format("SetProcessDataProc ({0})", arcData.ToString());
+        _callSignature = $"SetProcessDataProc ({arcData.ToString()})";
         try
         {
             TcCallback.SetPackerPluginCallbacks(null, null, processDataProc, null, null, null);
@@ -280,7 +269,7 @@ public class PackerWrapper
     [DllExport(EntryPoint = "SetProcessDataProcW")]
     public static void SetProcessDataProcW(IntPtr arcData, ProcessDataCallbackW processDataProcW)
     {
-        callSignature = string.Format("SetProcessDataProcW ({0})", arcData.ToString());
+        _callSignature = $"SetProcessDataProcW ({arcData.ToString()})";
         try
         {
             TcCallback.SetPackerPluginCallbacks(null, null, null, processDataProcW, null, null);
@@ -334,13 +323,7 @@ public class PackerWrapper
         PackFilesFlags flags)
     {
         var result = PackerResult.NotSupported;
-        callSignature = string.Format(
-            "PackFiles ({0}, {1}, {2}, {3}) - {4} files)",
-            packedFile,
-            subPath,
-            srcPath,
-            flags.ToString(),
-            addList.Count);
+        _callSignature = $"PackFiles ({packedFile}, {subPath}, {srcPath}, {flags.ToString()}) - {addList.Count} files)";
         try
         {
             result = Plugin.PackFiles(packedFile, subPath, srcPath, addList, flags);
@@ -376,10 +359,7 @@ public class PackerWrapper
     public static int DeleteFilesInternal(string packedFile, List<string> deleteList)
     {
         var result = PackerResult.NotSupported;
-        callSignature = string.Format(
-            "DeleteFiles ({0}) - {1} files)",
-            packedFile,
-            deleteList.Count);
+        _callSignature = $"DeleteFiles ({packedFile}) - {deleteList.Count} files)";
         try
         {
             result = Plugin.DeleteFiles(packedFile, deleteList);
@@ -402,7 +382,7 @@ public class PackerWrapper
     [DllExport(EntryPoint = "GetPackerCaps")]
     public static int GetPackerCaps()
     {
-        callSignature = "GetPackerCaps";
+        _callSignature = "GetPackerCaps";
 
         TraceCall(TraceLevel.Info, Plugin.Capabilities.ToString());
         return (int)Plugin.Capabilities;
@@ -416,7 +396,7 @@ public class PackerWrapper
     [return: MarshalAs(UnmanagedType.Bool)]
     public static void ConfigurePacker(IntPtr parentWin, IntPtr dllInstance)
     {
-        callSignature = "ConfigurePacker";
+        _callSignature = "ConfigurePacker";
         try
         {
             Plugin.ConfigurePacker(new TcWindow(parentWin));
@@ -441,7 +421,7 @@ public class PackerWrapper
     {
         var result = IntPtr.Zero;
         var mpOptions = (MemPackOptions)options;
-        callSignature = string.Format("StartMemPack {0} ({1})", fileName, mpOptions.ToString());
+        _callSignature = $"StartMemPack {fileName} ({mpOptions.ToString()})";
         try
         {
             var o = Plugin.StartMemPack(mpOptions, fileName);
@@ -478,12 +458,7 @@ public class PackerWrapper
         int seekBy)
     {
         var result = PackerResult.NotSupported;
-        callSignature = string.Format(
-            "PackToMem ({0} - {1}, {2}, {3})",
-            hMemPack.ToString(),
-            inLen,
-            outLen,
-            seekBy);
+        _callSignature = $"PackToMem ({hMemPack.ToString()} - {inLen}, {outLen}, {seekBy})";
         string traceRes = null;
         try
         {
@@ -492,10 +467,10 @@ public class PackerWrapper
             {
                 result = Plugin.PackToMem(ref o, bufIn, ref taken, bufOut, ref written, seekBy);
                 traceRes = result.ToString();
-                if (result == PackerResult.OK)
+                if (result == PackerResult.Ok)
                 {
                     TcHandles.UpdateHandle(hMemPack, o);
-                    traceRes += string.Format(" - {0}, {1}", taken, written);
+                    traceRes += $" - {taken}, {written}";
                 }
             }
 
@@ -517,21 +492,20 @@ public class PackerWrapper
     public static int DoneMemPack(IntPtr hMemPack)
     {
         var result = PackerResult.ErrorClose;
-        callSignature = string.Format("DoneMemPack ({0})", hMemPack.ToString());
+        _callSignature = $"DoneMemPack ({hMemPack.ToString()})";
         try
         {
             var o = TcHandles.GetObject(hMemPack);
             if (o != null)
             {
                 result = Plugin.DoneMemPack(o);
-                var disp = o as IDisposable;
-                if (disp != null)
+                if (o is IDisposable disp)
                 {
                     disp.Dispose();
                 }
 
                 var count = TcHandles.RemoveHandle(hMemPack);
-                TraceCall(TraceLevel.Warning, string.Format("{0} calls.", count));
+                TraceCall(TraceLevel.Warning, $"{count} calls.");
             }
         }
         catch (Exception ex)
@@ -555,7 +529,7 @@ public class PackerWrapper
     public static bool CanYouHandleThisFileW([MarshalAs(UnmanagedType.LPWStr)] string fileName)
     {
         var result = false;
-        callSignature = string.Format("CanYouHandleThisFile ({0})", fileName);
+        _callSignature = $"CanYouHandleThisFile ({fileName})";
         try
         {
             result = Plugin.CanYouHandleThisFile(fileName);
@@ -578,7 +552,7 @@ public class PackerWrapper
     [DllExport(EntryPoint = "PackSetDefaultParams")]
     public static void SetDefaultParams(ref PluginDefaultParams defParams)
     {
-        callSignature = "SetDefaultParams";
+        _callSignature = "SetDefaultParams";
         try
         {
             Plugin.DefaultParams = defParams;
@@ -599,7 +573,7 @@ public class PackerWrapper
     [DllExport(EntryPoint = "PkSetCryptCallback")]
     public static void SetCryptCallback(PkCryptCallback cryptProc, int cryptNumber, int flags)
     {
-        callSignature = string.Format("PkSetCryptCallback ({0}, {1})", cryptNumber, flags);
+        _callSignature = $"PkSetCryptCallback ({cryptNumber}, {flags})";
         try
         {
             TcCallback.SetPackerPluginCallbacks(null, null, null, null, cryptProc, null);
@@ -618,7 +592,7 @@ public class PackerWrapper
     [DllExport(EntryPoint = "PkSetCryptCallbackW")]
     public static void SetCryptCallbackW(PkCryptCallbackW cryptProcW, int cryptNumber, int flags)
     {
-        callSignature = string.Format("PkSetCryptCallbackW ({0}, {1})", cryptNumber, flags);
+        _callSignature = $"PkSetCryptCallbackW ({cryptNumber}, {flags})";
         try
         {
             TcCallback.SetPackerPluginCallbacks(null, null, null, null, null, cryptProcW);
@@ -643,7 +617,7 @@ public class PackerWrapper
     public static int GetBackgroundFlags()
     {
         var result = PackBackgroundFlags.None;
-        callSignature = "GetBackgroundFlags";
+        _callSignature = "GetBackgroundFlags";
         try
         {
             result = Plugin.BackgroundFlags;
@@ -666,12 +640,12 @@ public class PackerWrapper
 
     #region Tracing & Exceptions
 
-    private static void ProcessException(Exception ex) => TcPluginLoader.ProcessException(plugin, false, callSignature, ex);
+    private static void ProcessException(Exception ex) => TcPluginLoader.ProcessException(_plugin, false, _callSignature, ex);
 
     private static void TraceCall(TraceLevel level, string result)
     {
-        TcTrace.TraceCall(plugin, level, callSignature, result);
-        callSignature = null;
+        TcTrace.TraceCall(_plugin, level, _callSignature, result);
+        _callSignature = null;
     }
 
     #endregion Tracing & Exceptions

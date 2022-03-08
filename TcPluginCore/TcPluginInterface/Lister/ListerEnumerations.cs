@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.Lister;
+namespace TcPluginInterface.Lister;
 // Enumerations below are managed wrappers for corresponding integer flags discribed in 
 // TC "LS-Plugin writer's guide" (www.ghisler.com/plugins.htm) 
 
@@ -27,7 +27,7 @@ public enum ListerMessage
 // Used as result type for most Lister plugin methods
 public enum ListerResult
 {
-    OK = 0,
+    Ok = 0,
     Error
 }
 

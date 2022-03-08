@@ -2,7 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace OY.TotalCommander.TcPluginInterface.Packer;
+namespace TcPluginInterface.Packer;
 
 // Used as parameter type for ReadHeader method
 [CLSCompliant(false)]
@@ -13,54 +13,54 @@ public class HeaderData
 
     public void CopyTo(IntPtr ptr, HeaderDataMode mode)
     {
-        if (ptr != IntPtr.Zero)
+        if (ptr == IntPtr.Zero)
+            return;
+
+        if (mode == HeaderDataMode.Ansi)
         {
-            if (mode == HeaderDataMode.Ansi)
+            var data = new TcHeaderData
             {
-                var data = new TcHeaderData
-                {
-                    ArchiveName = ArchiveName,
-                    FileName = FileName,
-                    FileAttr = (int)FileAttributes & AllowedPackerAttributes,
-                    FileCRC = FileCRC,
-                    FileTime = TcUtils.GetArchiveHeaderTime(FileTime),
-                    PackSize = (int)PackedSize,
-                    UnpSize = (int)UnpackedSize
-                };
-                Marshal.StructureToPtr(data, ptr, false);
-            }
-            else if (mode == HeaderDataMode.ExAnsi)
+                ArchiveName = ArchiveName,
+                FileName = FileName,
+                FileAttr = (int)FileAttributes & AllowedPackerAttributes,
+                FileCRC = FileCrc,
+                FileTime = TcUtils.GetArchiveHeaderTime(FileTime),
+                PackSize = (int)PackedSize,
+                UnpSize = (int)UnpackedSize
+            };
+            Marshal.StructureToPtr(data, ptr, false);
+        }
+        else if (mode == HeaderDataMode.ExAnsi)
+        {
+            var data = new TcHeaderDataEx
             {
-                var data = new TcHeaderDataEx
-                {
-                    ArchiveName = ArchiveName,
-                    FileName = FileName,
-                    FileAttr = (int)FileAttributes & AllowedPackerAttributes,
-                    FileCRC = FileCRC,
-                    FileTime = TcUtils.GetArchiveHeaderTime(FileTime),
-                    PackSizeHigh = TcUtils.GetUHigh(PackedSize),
-                    PackSizeLow = TcUtils.GetULow(PackedSize),
-                    UnpSizeHigh = TcUtils.GetUHigh(UnpackedSize),
-                    UnpSizeLow = TcUtils.GetULow(UnpackedSize)
-                };
-                Marshal.StructureToPtr(data, ptr, false);
-            }
-            else if (mode == HeaderDataMode.ExUnicode)
+                ArchiveName = ArchiveName,
+                FileName = FileName,
+                FileAttr = (int)FileAttributes & AllowedPackerAttributes,
+                FileCRC = FileCrc,
+                FileTime = TcUtils.GetArchiveHeaderTime(FileTime),
+                PackSizeHigh = TcUtils.GetUHigh(PackedSize),
+                PackSizeLow = TcUtils.GetULow(PackedSize),
+                UnpSizeHigh = TcUtils.GetUHigh(UnpackedSize),
+                UnpSizeLow = TcUtils.GetULow(UnpackedSize)
+            };
+            Marshal.StructureToPtr(data, ptr, false);
+        }
+        else if (mode == HeaderDataMode.ExUnicode)
+        {
+            var data = new TcHeaderDataExW
             {
-                var data = new TcHeaderDataExW
-                {
-                    ArchiveName = ArchiveName,
-                    FileName = FileName,
-                    FileAttr = (int)FileAttributes & AllowedPackerAttributes,
-                    FileCRC = FileCRC,
-                    FileTime = TcUtils.GetArchiveHeaderTime(FileTime),
-                    PackSizeHigh = TcUtils.GetUHigh(PackedSize),
-                    PackSizeLow = TcUtils.GetULow(PackedSize),
-                    UnpSizeHigh = TcUtils.GetUHigh(UnpackedSize),
-                    UnpSizeLow = TcUtils.GetULow(UnpackedSize)
-                };
-                Marshal.StructureToPtr(data, ptr, false);
-            }
+                ArchiveName = ArchiveName,
+                FileName = FileName,
+                FileAttr = (int)FileAttributes & AllowedPackerAttributes,
+                FileCRC = FileCrc,
+                FileTime = TcUtils.GetArchiveHeaderTime(FileTime),
+                PackSizeHigh = TcUtils.GetUHigh(PackedSize),
+                PackSizeLow = TcUtils.GetULow(PackedSize),
+                UnpSizeHigh = TcUtils.GetUHigh(UnpackedSize),
+                UnpSizeLow = TcUtils.GetULow(UnpackedSize)
+            };
+            Marshal.StructureToPtr(data, ptr, false);
         }
     }
 
@@ -71,7 +71,7 @@ public class HeaderData
     public FileAttributes FileAttributes { get; set; }
     public ulong PackedSize { get; set; }
     public ulong UnpackedSize { get; set; }
-    public int FileCRC { get; set; }
+    public int FileCrc { get; set; }
     public DateTime FileTime { get; set; }
 
     //public int UnpVer { get; set; }

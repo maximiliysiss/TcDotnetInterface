@@ -1,8 +1,8 @@
-﻿namespace OY.TotalCommander.TcPluginInterface;
+﻿namespace TcPluginInterface;
 
 public enum CryptResult
 {
-    OK = 0, // Success.
+    Ok = 0, // Success.
     PasswordNotFound, // Password not found in password store.
     NoMasterPassword, // No master password entered yet.
     Failed, // Encrypt/Decrypt failed.

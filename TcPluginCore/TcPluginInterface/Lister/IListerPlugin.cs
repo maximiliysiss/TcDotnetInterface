@@ -1,6 +1,6 @@
 using System.Drawing;
 
-namespace OY.TotalCommander.TcPluginInterface.Lister;
+namespace TcPluginInterface.Lister;
 
 public interface IListerPlugin
 {

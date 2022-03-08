@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 [Serializable]
 public class PluginEventArgs : EventArgs

@@ -1,7 +1,7 @@
 ﻿using System;
-using OY.TotalCommander.TcPluginInterface;
+using TcPluginInterface;
 
-namespace OY.TotalCommander.TcPluginTools;
+namespace TcPluginTools;
 
 public class TcPluginLoadingInfo
 {

@@ -1,6 +1,6 @@
 using System;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 [Serializable]
 public enum PluginType

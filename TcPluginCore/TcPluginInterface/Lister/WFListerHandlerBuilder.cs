@@ -2,32 +2,29 @@
 using System.Collections.Generic;
 using System.Windows.Forms;
 
-namespace OY.TotalCommander.TcPluginInterface.Lister;
+namespace TcPluginInterface.Lister;
 
 [Serializable]
-public class WFListerHandlerBuilder : IListerHandlerBuilder
+public class WfListerHandlerBuilder : IListerHandlerBuilder
 {
     public ListerPlugin Plugin { get; set; }
 
     public IntPtr GetHandle(object listerControl, IntPtr parentHandle)
     {
         var listerHandle = IntPtr.Zero;
-        if (listerControl != null)
-        {
-            if (listerControl is UserControl)
-            {
-                var userControl = (UserControl)listerControl;
-                if (Plugin.FocusedControl != null && Plugin.FocusedControl is Control)
-                {
-                    (Plugin.FocusedControl as Control).KeyDown += wfControl_KeyDown;
-                }
+        if (listerControl == null)
+            return listerHandle;
 
-                listerHandle = userControl.Handle;
-            }
-            else
-            {
-                throw new Exception("Unexpected WinForms control type: " + listerControl.GetType());
-            }
+        if (listerControl is UserControl userControl)
+        {
+            if (Plugin.FocusedControl is Control control)
+                control.KeyDown += wfControl_KeyDown;
+
+            listerHandle = userControl.Handle;
+        }
+        else
+        {
+            throw new Exception($"Unexpected WinForms control type: {listerControl.GetType()}");
         }
 
         return listerHandle;
@@ -35,7 +32,7 @@ public class WFListerHandlerBuilder : IListerHandlerBuilder
 
     #region Keyboard Handler
 
-    private static readonly List<Keys> SentToParentKeys = new()
+    private static readonly List<Keys> _sentToParentKeys = new()
     {
         Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5, Keys.D6, Keys.D7, Keys.D8, // Options.Mode
         Keys.N, Keys.P,
@@ -44,7 +41,7 @@ public class WFListerHandlerBuilder : IListerHandlerBuilder
         Keys.F2, Keys.F5, Keys.F7
     };
 
-    private static readonly List<Keys> SentToParentCtrlKeys = new()
+    private static readonly List<Keys> _sentToParentCtrlKeys = new()
     {
         Keys.A, Keys.C, Keys.P
     };
@@ -56,12 +53,12 @@ public class WFListerHandlerBuilder : IListerHandlerBuilder
             Plugin.CloseParentWindow();
             e.Handled = true;
         }
-        else if (SentToParentCtrlKeys.Contains(e.KeyCode) && e.Control && !e.Alt)
+        else if (_sentToParentCtrlKeys.Contains(e.KeyCode) && e.Control && !e.Alt)
         {
             var code = e.KeyValue | (int)Keys.Control;
             Plugin.SendKeyToParentWindow(code);
         }
-        else if (SentToParentKeys.Contains(e.KeyCode) && !e.Control && !e.Alt)
+        else if (_sentToParentKeys.Contains(e.KeyCode) && !e.Control && !e.Alt)
         {
             Plugin.SendKeyToParentWindow(e.KeyValue);
         }

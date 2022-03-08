@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 // Class, used to store passwords in the TC secure password store, 
 // retrieve them back, or copy them to a new store.
@@ -8,18 +8,18 @@ namespace OY.TotalCommander.TcPluginInterface;
 [Serializable]
 public class PluginPassword
 {
-    private readonly int cryptoNumber;
-    private readonly CryptFlags flags;
-    private TcPlugin plugin;
+    private readonly int _cryptoNumber;
+    private readonly CryptFlags _flags;
+    private TcPlugin _plugin;
 
     public PluginPassword(TcPlugin plugin, int cryptoNumber, int flags)
     {
-        this.plugin = plugin;
-        this.cryptoNumber = cryptoNumber;
-        this.flags = (CryptFlags)flags;
+        _plugin = plugin;
+        _cryptoNumber = cryptoNumber;
+        _flags = (CryptFlags)flags;
     }
 
-    public bool TcMasterPasswordDefined => (flags & CryptFlags.MasterPassSet) == CryptFlags.MasterPassSet;
+    public bool TcMasterPasswordDefined => (_flags & CryptFlags.MasterPassSet) == CryptFlags.MasterPassSet;
 
     // Convert result returned by TC to CryptResult. Must be overidden in derived classes.
     protected virtual CryptResult GetCryptResult(int tcCryptResult) => CryptResult.PasswordNotFound;
@@ -27,9 +27,9 @@ public class PluginPassword
     private CryptResult Crypt(CryptMode mode, string storeName, ref string password)
     {
         var e =
-            new CryptEventArgs(plugin.PluginNumber, cryptoNumber, (int)mode, storeName, password);
-        var result = GetCryptResult(plugin.OnTcPluginEvent(e));
-        if (result == CryptResult.OK)
+            new CryptEventArgs(_plugin.PluginNumber, _cryptoNumber, (int)mode, storeName, password);
+        var result = GetCryptResult(_plugin.OnTcPluginEvent(e));
+        if (result == CryptResult.Ok)
         {
             password = e.Password;
         }
@@ -50,10 +50,10 @@ public class PluginPassword
     }
 
     // Load password from password store only if master password has already been entered.
-    public CryptResult LoadNoUI(string store, ref string password)
+    public CryptResult LoadNoUi(string store, ref string password)
     {
         password = string.Empty;
-        return Crypt(CryptMode.LoadPasswordNoUI, store, ref password);
+        return Crypt(CryptMode.LoadPasswordNoUi, store, ref password);
     }
 
     // Copy password to new store.
@@ -69,9 +69,9 @@ public class PluginPassword
         return Crypt(CryptMode.DeletePassword, store, ref password);
     }
 
-    public int GetCryptoNumber() => cryptoNumber;
+    public int GetCryptoNumber() => _cryptoNumber;
 
-    public int GetFlags() => (int)flags;
+    public int GetFlags() => (int)_flags;
 
     #endregion Public Methods
 
@@ -88,7 +88,7 @@ public class PluginPassword
     {
         SavePassword = 1,
         LoadPassword,
-        LoadPasswordNoUI,
+        LoadPasswordNoUi,
         CopyPassword,
         MovePassword,
         DeletePassword

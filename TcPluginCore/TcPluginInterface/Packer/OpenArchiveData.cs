@@ -1,37 +1,37 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace OY.TotalCommander.TcPluginInterface.Packer;
+namespace TcPluginInterface.Packer;
 
 // Used as parameter type for OpenArchive method
 [Serializable]
 public class OpenArchiveData
 {
-    private readonly IntPtr ptr;
-    private TcOpenArchiveData data;
-    private TcOpenArchiveDataW dataW;
-    private bool isUnicode;
+    private readonly IntPtr _ptr;
+    private TcOpenArchiveData _data;
+    private TcOpenArchiveDataW _dataW;
+    private bool _isUnicode;
 
     #region Constructors
 
     public OpenArchiveData(IntPtr ptr, bool isUnicode)
     {
-        this.ptr = ptr;
-        this.isUnicode = isUnicode;
-        if (ptr != IntPtr.Zero)
+        _ptr = ptr;
+        _isUnicode = isUnicode;
+        if (ptr == IntPtr.Zero)
+            return;
+
+        if (isUnicode)
         {
-            if (isUnicode)
-            {
-                dataW = (TcOpenArchiveDataW)Marshal.PtrToStructure(ptr, typeof(TcOpenArchiveDataW));
-                ArchiveName = dataW.ArchiveName;
-                Mode = (ArcOpenMode)dataW.Mode;
-            }
-            else
-            {
-                data = (TcOpenArchiveData)Marshal.PtrToStructure(ptr, typeof(TcOpenArchiveData));
-                ArchiveName = data.ArchiveName;
-                Mode = (ArcOpenMode)data.Mode;
-            }
+            _dataW = (TcOpenArchiveDataW)Marshal.PtrToStructure(ptr, typeof(TcOpenArchiveDataW));
+            ArchiveName = _dataW.ArchiveName;
+            Mode = (ArcOpenMode)_dataW.Mode;
+        }
+        else
+        {
+            _data = (TcOpenArchiveData)Marshal.PtrToStructure(ptr, typeof(TcOpenArchiveData));
+            ArchiveName = _data.ArchiveName;
+            Mode = (ArcOpenMode)_data.Mode;
         }
     }
 
@@ -39,18 +39,18 @@ public class OpenArchiveData
 
     public void Update()
     {
-        if (ptr != IntPtr.Zero)
+        if (_ptr == IntPtr.Zero)
+            return;
+
+        if (_isUnicode)
         {
-            if (isUnicode)
-            {
-                dataW.Result = (int)Result;
-                Marshal.StructureToPtr(dataW, ptr, false);
-            }
-            else
-            {
-                data.Result = (int)Result;
-                Marshal.StructureToPtr(data, ptr, false);
-            }
+            _dataW.Result = (int)Result;
+            Marshal.StructureToPtr(_dataW, _ptr, false);
+        }
+        else
+        {
+            _data.Result = (int)Result;
+            Marshal.StructureToPtr(_data, _ptr, false);
         }
     }
 

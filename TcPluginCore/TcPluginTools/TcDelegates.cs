@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace OY.TotalCommander.TcPluginTools;
+namespace TcPluginTools;
 
 #region FS Plugin Delegates
 

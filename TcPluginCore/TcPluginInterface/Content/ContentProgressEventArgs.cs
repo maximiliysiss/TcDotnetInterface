@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface.Content;
+namespace TcPluginInterface.Content;
 
 [Serializable]
 public class ContentProgressEventArgs : PluginEventArgs

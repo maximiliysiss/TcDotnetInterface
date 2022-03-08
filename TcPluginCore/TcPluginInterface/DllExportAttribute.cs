@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 // Indicates that the attributed method will be exposed to unmanaged code as a static entry point. 
 [AttributeUsage(AttributeTargets.Method)]

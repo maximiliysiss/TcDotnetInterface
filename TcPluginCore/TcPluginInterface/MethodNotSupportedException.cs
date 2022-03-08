@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 
-namespace OY.TotalCommander.TcPluginInterface;
+namespace TcPluginInterface;
 
 [Serializable]
 [ComVisible(true)]
@@ -16,8 +16,7 @@ public class MethodNotSupportedException : Exception
     {
     }
 
-    public MethodNotSupportedException(string message, Exception ex)
-        : base(message, ex)
+    public MethodNotSupportedException(string message, Exception ex) : base(message, ex)
     {
     }
 
@@ -29,8 +28,7 @@ public class MethodNotSupportedException : Exception
         : base(string.Format(Message1Fmt, methodName)) =>
         Mandatory = false;
 
-    protected MethodNotSupportedException(SerializationInfo info, StreamingContext context)
-        : base(info, context)
+    protected MethodNotSupportedException(SerializationInfo info, StreamingContext context) : base(info, context)
     {
     }
 
@@ -40,9 +38,7 @@ public class MethodNotSupportedException : Exception
     public override void GetObjectData(SerializationInfo info, StreamingContext context)
     {
         if (info == null)
-        {
             throw new ArgumentNullException("info");
-        }
 
         info.AddValue("Mandatory", Mandatory.ToString());
         base.GetObjectData(info, context);
