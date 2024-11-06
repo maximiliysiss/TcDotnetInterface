@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+      <ProjectReference Include="..\TotalCommander.Interface.Abstraction\TotalCommander.Interface.Abstraction.csproj" />
+    </ItemGroup>
+
+</Project>
