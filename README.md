@@ -1,5 +1,5 @@
 # TC .Net Interface
-Personal Fork of https://sourceforge.net/projects/tcdotnetinterface/
+
 
 # Original Description
 If you are .NET developer and have a good idea for TC plugin - provided interface is the right choice for you.
@@ -16,16 +16,3 @@ Main features:
 - control over the lifetime policy for managed plugin instance,
 - auto support for Unicode and 64-bit features,
 - compact final binary files (usually < 100 KB)
-
-# Initial Author
-- olegy-293 
-- Des Plaines / United States / CST 
-
-# Related projects I found so far
-- ![GIS Viewer](https://github.com/gepcel/GisViewer)
-	Sadly without sources!
-- ![Markdown Viewer](https://github.com/wangzhfeng/MarkdownViewer)
-	Sources Included, but no license.
-
-# License
-MIT
