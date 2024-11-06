@@ -1,9 +1,0 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <Reference Include="System.Configuration"/>
-    <Reference Include="System.Windows.Forms"/>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\TcPluginInterface\TcPluginInterface.csproj"/>
-  </ItemGroup>
-</Project>

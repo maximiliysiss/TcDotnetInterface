@@ -1,8 +1,0 @@
-<Project>
-
-  <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-    <LangVersion>default</LangVersion>
-  </PropertyGroup>
-
-</Project>
