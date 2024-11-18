@@ -1,3 +1,3 @@
 ﻿namespace TotalCommander.Interface.Aot.Context.Models;
 
-internal sealed record Extension(string Name, Method[] Methods);
+internal sealed record Extension(string Name, IMethod[] Methods);

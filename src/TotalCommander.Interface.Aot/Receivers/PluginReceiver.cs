@@ -1,15 +1,13 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using TotalCommander.Interface.Aot.Context;
-using TotalCommander.Interface.Aot.Receivers.Models;
+using TotalCommander.Interface.Aot.Context.Plugins;
 
 namespace TotalCommander.Interface.Aot.Receivers;
 
 internal sealed class PluginReceiver : ISyntaxContextReceiver
 {
-    public List<PluginReceiverContext> Contexts { get; } = new(1);
+    public List<(IPlugin plugin, Location)> Plugins { get; } = new(1);
 
     public void OnVisitSyntaxNode(GeneratorSyntaxContext context)
     {
@@ -19,23 +17,10 @@ internal sealed class PluginReceiver : ISyntaxContextReceiver
         if (context.SemanticModel.GetDeclaredSymbol(node) is not INamedTypeSymbol symbol)
             return;
 
-        var plugins = PluginContext.Plugins
-            .Select(c => new { Plugin = c, Type = context.SemanticModel.Compilation.GetTypeByMetadataName(c.Name) })
-            .Where(c => c.Type is not null)
-            .ToArray();
-
-        var linkedPlugins = plugins
-            .Where(c => symbol.Interfaces.Contains(c.Type!))
-            .ToArray();
-
-        if (linkedPlugins is [])
+        var plugin = PluginFactory.CreatePlugin(context, symbol);
+        if (plugin is null)
             return;
 
-        var pluginReceiverContext = new PluginReceiverContext(
-            Symbol: symbol,
-            Location: context.Node.GetLocation(),
-            Plugins: [.. linkedPlugins.Select(c => c.Plugin)]);
-
-        Contexts.Add(pluginReceiverContext);
+        Plugins.Add((plugin, node.GetLocation()));
     }
 }

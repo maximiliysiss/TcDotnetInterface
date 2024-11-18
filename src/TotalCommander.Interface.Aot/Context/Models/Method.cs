@@ -1,3 +1,8 @@
-﻿namespace TotalCommander.Interface.Aot.Context.Models;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-internal sealed record Method(string Name);
+namespace TotalCommander.Interface.Aot.Context.Models;
+
+internal interface IMethod
+{
+    MethodDeclarationSyntax Create();
+}

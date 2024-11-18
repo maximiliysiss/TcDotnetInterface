@@ -1,9 +1,11 @@
 ﻿using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using TotalCommander.Interface.Aot.Context.Plugins.Bridge;
 using TotalCommander.Interface.Aot.Generator.Diagnostics;
 using TotalCommander.Interface.Aot.Receivers;
-using TotalCommander.Interface.Aot.Receivers.Models;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace TotalCommander.Interface.Aot.Generator;
 
@@ -17,35 +19,39 @@ internal sealed class NativeApiGenerator : ISourceGenerator
 
     public void Execute(GeneratorExecutionContext context)
     {
-        if (context.SyntaxContextReceiver is not PluginReceiver receiver)
+        if (context.SyntaxContextReceiver is not PluginReceiver receiver || receiver.Plugins is [])
             return;
 
-        if (receiver.Contexts is [])
-            return;
-
-        if (receiver.Contexts.Count is not 1)
+        if (receiver.Plugins.Count > 1)
         {
-            foreach (var diagnostic in receiver.Contexts.Select(MapDiagnostic))
+            foreach (var diagnostic in receiver.Plugins.Select(c => MapDiagnostic(c.Item2)))
                 context.ReportDiagnostic(diagnostic);
             return;
         }
 
-        var receiverContext = receiver.Contexts[0];
-        if (receiverContext.Plugins.Length > 1)
-        {
-            context.ReportDiagnostic(MapDiagnostic(receiverContext));
-            return;
-        }
+        var (plugin, _) = receiver.Plugins[0];
 
-        var compilationUnitSyntax = SyntaxFactory.CompilationUnit();
+        var memberDeclarationSyntax = ClassDeclaration("Api")
+            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))
+            .WithMembers(List<MemberDeclarationSyntax>([BridgeFactory.Create(plugin), .. plugin.Methods.Select(c => c.Create())]));
+
+        var namespaceSyntax = FileScopedNamespaceDeclaration(IdentifierName("TotalCommander.Api"))
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(memberDeclarationSyntax));
+
+        var source = CompilationUnit()
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(namespaceSyntax))
+            .NormalizeWhitespace()
+            .ToFullString();
+
+        context.AddSource("Api.g.cs", source);
 
         return;
 
-        Diagnostic MapDiagnostic(PluginReceiverContext ctx)
+        Diagnostic MapDiagnostic(Location location)
         {
             return Diagnostic.Create(
                 descriptor: DiagnosticDescriptors.OnlyOnePluginInterface,
-                location: ctx.Location);
+                location: location);
         }
     }
 }
