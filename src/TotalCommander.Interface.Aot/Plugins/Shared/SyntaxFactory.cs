@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace TotalCommander.Interface.Aot.Context.Plugins.Shared;
+namespace TotalCommander.Interface.Aot.Plugins.Shared;
 
 internal static class SyntaxFactory
 {

@@ -1,13 +1,14 @@
 ﻿using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using TotalCommander.Interface.Aot.Context.Plugins;
+using TotalCommander.Interface.Aot.Generator.Models;
+using TotalCommander.Interface.Aot.Plugins;
 
 namespace TotalCommander.Interface.Aot.Receivers;
 
 internal sealed class PluginReceiver : ISyntaxContextReceiver
 {
-    public List<(IPlugin plugin, Location)> Plugins { get; } = new(1);
+    public List<(IPlugin Plugin, Location Location)> Plugins { get; } = new(1);
 
     public void OnVisitSyntaxNode(GeneratorSyntaxContext context)
     {

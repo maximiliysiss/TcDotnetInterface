@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using TotalCommander.Interface.Aot.Context.Plugins.FileSystem;
-using TotalCommander.Interface.Aot.Context.Plugins.FileSystem.Bridge;
+using TotalCommander.Interface.Aot.Generator.Models;
+using TotalCommander.Interface.Aot.Plugins.FileSystem;
+using TotalCommander.Interface.Aot.Plugins.FileSystem.Bridge;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace TotalCommander.Interface.Aot.Context.Plugins.Bridge;
+namespace TotalCommander.Interface.Aot.Plugins.Bridge;
 
 internal static class BridgeFactory
 {

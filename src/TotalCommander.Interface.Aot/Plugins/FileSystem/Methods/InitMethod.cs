@@ -1,14 +1,14 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using TotalCommander.Interface.Aot.Context.Models;
+using TotalCommander.Interface.Aot.Generator.Models;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
-using static TotalCommander.Interface.Aot.Context.Plugins.Shared.SyntaxFactory;
-using static TotalCommander.Interface.Aot.Context.Plugins.Infrastructure.Constants;
+using static TotalCommander.Interface.Aot.Plugins.Shared.SyntaxFactory;
+using static TotalCommander.Interface.Aot.Plugins.Infrastructure.TypeNames;
 
-namespace TotalCommander.Interface.Aot.Context.Plugins.FileSystem.Methods;
+namespace TotalCommander.Interface.Aot.Plugins.FileSystem.Methods;
 
-internal sealed class FsInitMethod(string name) : IMethod
+internal sealed class InitMethod(string name) : IMethod
 {
     public MethodDeclarationSyntax Create()
     {

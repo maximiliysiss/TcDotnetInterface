@@ -1,9 +1,10 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using TotalCommander.Interface.Aot.Context.Plugins.Bridge;
 using TotalCommander.Interface.Aot.Generator.Diagnostics;
+using TotalCommander.Interface.Aot.Plugins.Bridge;
 using TotalCommander.Interface.Aot.Receivers;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
@@ -24,18 +25,29 @@ internal sealed class NativeApiGenerator : ISourceGenerator
 
         if (receiver.Plugins.Count > 1)
         {
-            foreach (var diagnostic in receiver.Plugins.Select(c => MapDiagnostic(c.Item2)))
+            foreach (var diagnostic in receiver.Plugins.Select(c => MapDiagnostic(c.Location)))
                 context.ReportDiagnostic(diagnostic);
             return;
         }
 
         var (plugin, _) = receiver.Plugins[0];
 
-        var memberDeclarationSyntax = ClassDeclaration("Api")
-            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))
-            .WithMembers(List<MemberDeclarationSyntax>([BridgeFactory.Create(plugin), .. plugin.Methods.Select(c => c.Create())]));
+        const string apiName = "Api";
 
-        var namespaceSyntax = FileScopedNamespaceDeclaration(IdentifierName("TotalCommander.Api"))
+        IEnumerable<MemberDeclarationSyntax> members =
+        [
+            BridgeFactory.Create(plugin),
+            .. plugin.Methods.Select(m => m.Create()),
+            .. plugin.Extensions.SelectMany(e => e.Methods.Select(m => m.Create()))
+        ];
+
+        var memberDeclarationSyntax = ClassDeclaration(apiName)
+            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))
+            .WithMembers(List(members));
+
+        const string namespaceName = "TotalCommander.Api";
+
+        var namespaceSyntax = FileScopedNamespaceDeclaration(IdentifierName(namespaceName))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(memberDeclarationSyntax));
 
         var source = CompilationUnit()

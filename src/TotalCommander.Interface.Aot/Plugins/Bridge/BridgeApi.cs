@@ -1,4 +1,4 @@
-﻿namespace TotalCommander.Interface.Aot.Context.Plugins.Bridge;
+﻿namespace TotalCommander.Interface.Aot.Plugins.Bridge;
 
 internal static class BridgeApi
 {

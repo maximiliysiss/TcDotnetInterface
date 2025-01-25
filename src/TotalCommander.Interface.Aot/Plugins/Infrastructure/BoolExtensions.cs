@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis.CSharp;
 
-namespace TotalCommander.Interface.Aot.Context.Plugins.Infrastructure;
+namespace TotalCommander.Interface.Aot.Plugins.Infrastructure;
 
 internal static class BoolExtensions
 {

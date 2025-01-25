@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace TotalCommander.Interface.Aot.Context.Models;
+namespace TotalCommander.Interface.Aot.Generator.Models;
 
 internal interface IMethod
 {
